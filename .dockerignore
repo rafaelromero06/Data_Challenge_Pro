@@ -1,0 +1,16 @@
+.git
+.gitignore
+.gitattributes
+.vscode
+.env
+.env.*
+**/__pycache__
+**/*.pyc
+.ipynb_checkpoints
+*.ipynb
+*.pdf
+datos
+modelos
+Dockerfile
+docker-compose.yml
+.dockerignore

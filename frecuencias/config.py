@@ -1,0 +1,24 @@
+from pathlib import Path
+
+RAIZ = Path(__file__).resolve().parents[1]
+CARPETA_DATOS = RAIZ / "datos"
+ARCHIVO_DEMANDA = CARPETA_DATOS / "demanda_15min.parquet"
+CARPETA_MODELOS = RAIZ / "modelos"
+
+RANDOM_SEED = 42
+PASO_MIN = 15
+PASOS_DIA = 24 * 60 // PASO_MIN
+PASOS_SEMANA = 7 * PASOS_DIA
+PASOS_ANIO = 52 * PASOS_SEMANA
+HORIZONTES_MIN = [30, 60, 120]
+FEATURE_VERSION = "v3-sensores-3anios"
+
+MIN_FRACCION_LECTURAS_DIA = 0.05
+MAX_SUBIDAS_LECTURA = 90
+
+ID_PRECARNAVAL = 7
+ID_CARNAVAL_CENTRAL = 8
+ID_SEMANA_SANTA = 10
+
+ESQUEMA_IA = "ai_frecuencias"
+ZONA_HORARIA = "America/Bogota"

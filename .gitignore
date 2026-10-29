@@ -1,0 +1,17 @@
+.env
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+datos/
+modelos/paquetes/
+modelos/archivo/
+modelos/activos.json
+reportes/
+.scannerwork/
+.coverage
+coverage.xml
+reporte-pruebas.xml
+.pytest_cache/
+paper/*.aux
+paper/*.log
+paper/*.out

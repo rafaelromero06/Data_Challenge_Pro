@@ -1,0 +1,6 @@
+[run]
+relative_files = True
+source = frecuencias
+
+[report]
+skip_empty = True

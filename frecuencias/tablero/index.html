@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SOBUSA Frecuencias</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%231f5fbf'/%3E%3Cpath d='M3 11h10M5 5h6v6H5z' stroke='white' fill='none'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+<a class="saltar" href="#contenido">Saltar al contenido</a>
+<header class="cabecera">
+  <div>
+    <h1>SOBUSA · Frecuencias inteligentes</h1>
+    <p class="sub">Demanda por franja de 15 min, frecuencia recomendada y alertas operativas</p>
+  </div>
+  <dl class="salud" id="salud" aria-live="polite">
+    <div><dt>Servicio</dt><dd id="salud-estado">cargando…</dd></div>
+    <div><dt>Último dato</dt><dd id="salud-dato">–</dd></div>
+    <div><dt>Modelos</dt><dd id="salud-modelos">–</dd></div>
+    <div><dt>Ciclo</dt><dd id="salud-ciclo">–</dd></div>
+  </dl>
+  <form id="form-clave" class="clave" autocomplete="off">
+    <label>Clave de acceso <input type="password" id="clave-api" autocomplete="off" spellcheck="false" aria-describedby="clave-estado"></label>
+    <button type="submit">Usar</button>
+    <span id="clave-estado" class="sub" aria-live="polite"></span>
+  </form>
+</header>
+
+<nav class="pestanas" role="tablist" aria-label="Secciones">
+  <button role="tab" id="tab-prediccion" aria-controls="panel-prediccion" aria-selected="true">Predicción</button>
+  <button role="tab" id="tab-alertas" aria-controls="panel-alertas" aria-selected="false" tabindex="-1">Alertas</button>
+  <button role="tab" id="tab-ejecuciones" aria-controls="panel-ejecuciones" aria-selected="false" tabindex="-1">Ejecuciones</button>
+  <button role="tab" id="tab-modelos" aria-controls="panel-modelos" aria-selected="false" tabindex="-1">Modelos</button>
+  <button role="tab" id="tab-parametros" aria-controls="panel-parametros" aria-selected="false" tabindex="-1">Parámetros</button>
+  <button role="tab" id="tab-exportar" aria-controls="panel-exportar" aria-selected="false" tabindex="-1">Exportar</button>
+</nav>
+
+<main id="contenido">
+  <p class="aviso" id="aviso" role="status" aria-live="polite" hidden></p>
+
+  <section role="tabpanel" id="panel-prediccion" aria-labelledby="tab-prediccion">
+    <form id="form-prediccion" class="filtros">
+      <label>Ruta <select id="pred-ruta" required></select></label>
+      <label>Referencia (hora local) <input type="datetime-local" id="pred-referencia" step="900"></label>
+      <label class="check"><input type="checkbox" id="pred-guardar" checked> Guardar en ai_frecuencias</label>
+      <button type="submit" class="primario">Calcular</button>
+    </form>
+    <div id="pred-resultado" hidden>
+      <div class="kpis" id="pred-kpis"></div>
+      <figure class="grafico">
+        <figcaption id="pred-titulo">Pasajeros por franja de 15 min</figcaption>
+        <div id="pred-grafico" role="img" aria-describedby="pred-tabla-titulo"></div>
+        <ul class="leyenda" aria-hidden="true">
+          <li><span class="m m-pred"></span>Predicción</li>
+          <li><span class="m m-int"></span>Intervalo 80 %</li>
+          <li><span class="m m-real"></span>Observado</li>
+          <li><span class="m m-base"></span>Promedio 4 semanas</li>
+        </ul>
+      </figure>
+      <h2>Recomendación por hora</h2>
+      <div class="tarjetas" id="pred-recomendaciones"></div>
+      <h2 id="pred-tabla-titulo">Detalle por franja</h2>
+      <div class="tabla-envoltura"><table id="pred-tabla"><thead><tr><th scope="col">Franja</th></tr></thead><tbody><tr><td>Sin datos todavía</td></tr></tbody></table></div>
+    </div>
+  </section>
+
+  <section role="tabpanel" id="panel-alertas" aria-labelledby="tab-alertas" hidden>
+    <form id="form-alertas" class="filtros">
+      <label>Estado
+        <select id="al-estado">
+          <option value="">todos</option><option>abierta</option><option>reconocida</option>
+          <option>asignada</option><option>cerrada</option><option>descartada</option>
+        </select>
+      </label>
+      <label>Severidad
+        <select id="al-severidad"><option value="">todas</option><option>critica</option><option>alta</option><option>media</option><option>baja</option></select>
+      </label>
+      <label>Ruta <select id="al-ruta"><option value="">todas</option></select></label>
+      <button type="submit">Filtrar</button>
+    </form>
+    <div class="tabla-envoltura"><table id="al-tabla"><thead><tr><th scope="col">Alerta</th></tr></thead><tbody><tr><td>Sin datos todavía</td></tr></tbody></table></div>
+    <div class="paginador" id="al-paginador"></div>
+    <section id="al-detalle" class="detalle" hidden aria-labelledby="al-detalle-titulo">
+      <h2 id="al-detalle-titulo">Alerta</h2>
+      <p id="al-detalle-texto"></p>
+      <form id="form-estado" class="filtros">
+        <label>Usuario (sin clave) <input id="al-usuario" autocomplete="username"></label>
+        <label>Nuevo estado
+          <select id="al-nuevo"><option value="">(solo comentario)</option><option>reconocida</option><option>asignada</option><option>cerrada</option><option>descartada</option></select>
+        </label>
+        <label>Asignar a <input id="al-asignado"></label>
+        <label class="ancho">Comentario <input id="al-comentario"></label>
+        <button type="submit" class="primario">Actualizar</button>
+      </form>
+      <h3>Historial</h3>
+      <ol id="al-historial" class="historial"></ol>
+    </section>
+  </section>
+
+  <section role="tabpanel" id="panel-ejecuciones" aria-labelledby="tab-ejecuciones" hidden>
+    <form id="form-ciclo" class="filtros">
+      <label>Origen <select id="ci-origen"><option value="base">base del reto</option><option value="archivos">archivos locales</option></select></label>
+      <label>Días <input type="number" id="ci-dias" min="1" max="31" value="1"></label>
+      <label>Reentrenar <select id="ci-reentrenar"><option>auto</option><option>siempre</option><option>nunca</option></select></label>
+      <button type="submit" class="primario">Ejecutar ciclo</button>
+    </form>
+    <div class="tabla-envoltura"><table id="ej-tabla"><thead><tr><th scope="col">Ejecución</th></tr></thead><tbody><tr><td>Sin datos todavía</td></tr></tbody></table></div>
+    <pre id="ej-detalle" class="json" hidden></pre>
+  </section>
+
+  <section role="tabpanel" id="panel-modelos" aria-labelledby="tab-modelos" hidden>
+    <label class="filtros">Usuario que aprueba (sin clave) <input id="mo-usuario" autocomplete="username"></label>
+    <div class="tabla-envoltura"><table id="mo-tabla"><thead><tr><th scope="col">Modelo</th></tr></thead><tbody><tr><td>Sin datos todavía</td></tr></tbody></table></div>
+  </section>
+
+  <section role="tabpanel" id="panel-parametros" aria-labelledby="tab-parametros" hidden>
+    <form id="form-parametro" class="filtros">
+      <label>Clave <input id="pa-clave" required list="pa-claves"></label>
+      <datalist id="pa-claves"></datalist>
+      <label>Valor <input id="pa-valor" type="number" step="any" required></label>
+      <label>Ruta (opcional) <input id="pa-ruta" type="number"></label>
+      <label>Usuario (sin clave) <input id="pa-usuario" autocomplete="username"></label>
+      <label class="check"><input type="checkbox" id="pa-validado"> Validado por operación</label>
+      <button type="submit" class="primario">Publicar versión</button>
+    </form>
+    <div class="tabla-envoltura"><table id="pa-tabla"><thead><tr><th scope="col">Parámetro</th></tr></thead><tbody><tr><td>Sin datos todavía</td></tr></tbody></table></div>
+  </section>
+
+  <section role="tabpanel" id="panel-exportar" aria-labelledby="tab-exportar" hidden>
+    <form id="form-exportar" class="filtros">
+      <label>Recurso
+        <select id="ex-recurso">
+          <option value="predictions">predicciones</option><option value="recommendations">recomendaciones</option>
+          <option value="alerts">alertas</option><option value="executions">ejecuciones</option>
+          <option value="data-quality">calidad de datos</option>
+        </select>
+      </label>
+      <label>Formato <select id="ex-formato"><option value="csv">CSV</option><option value="xlsx">Excel</option></select></label>
+      <label>Ruta <select id="ex-ruta"><option value="">todas</option></select></label>
+      <label>Desde <input type="datetime-local" id="ex-desde"></label>
+      <label>Hasta <input type="datetime-local" id="ex-hasta"></label>
+      <button type="submit" class="primario">Descargar</button>
+    </form>
+    <p class="nota">Las fechas se interpretan en hora local de Barranquilla. La exportación está limitada a 100 000 filas.</p>
+  </section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>

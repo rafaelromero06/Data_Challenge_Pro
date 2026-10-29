@@ -1,0 +1,62 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: postgis/postgis:14-3.5
+        env:
+          POSTGRES_DB: frecuencias
+          POSTGRES_USER: frecuencias
+          POSTGRES_PASSWORD: ci-frecuencias
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U frecuencias -d frecuencias"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      AI_DB_HOST: localhost
+      AI_DB_PORT: "5433"
+      AI_DB_NAME: frecuencias
+      AI_DB_USER: frecuencias
+      AI_DB_PASSWORD: ci-frecuencias
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements-dev.txt
+      - run: python -m alembic upgrade head
+      - run: python -m alembic downgrade base && python -m alembic upgrade head
+      - run: python -m pytest -m "not lenta" --cov=frecuencias --cov-report=xml --cov-report=term --junitxml=reporte-pruebas.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reportes-pruebas
+          path: |
+            coverage.xml
+            reporte-pruebas.xml
+      - name: SonarQube
+        if: ${{ env.SONAR_TOKEN != '' }}
+        uses: SonarSource/sonarqube-scan-action@v5
+        env:
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+  imagen:
+    runs-on: ubuntu-latest
+    needs: pruebas
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t frecuencias-api:ci .

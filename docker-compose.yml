@@ -1,0 +1,90 @@
+name: frecuencias
+
+x-base-ia: &base-ia
+  AI_DB_HOST: db
+  AI_DB_PORT: "5432"
+  AI_DB_NAME: ${AI_DB_NAME:-frecuencias}
+  AI_DB_USER: ${AI_DB_USER:-frecuencias}
+  AI_DB_PASSWORD: ${AI_DB_PASSWORD:?Defina AI_DB_PASSWORD en .env}
+  SOBUSA_DB_HOST: ${SOBUSA_DB_HOST:-}
+  SOBUSA_DB_PORT: ${SOBUSA_DB_PORT:-5432}
+  SOBUSA_DB_NAME: ${SOBUSA_DB_NAME:-dataset}
+  SOBUSA_DB_USER: ${SOBUSA_DB_USER:-}
+  SOBUSA_DB_PASSWORD: ${SOBUSA_DB_PASSWORD:-${PGPASSWORD:-}}
+  SOBUSA_DB_SSLMODE: ${SOBUSA_DB_SSLMODE:-prefer}
+  ENTORNO: ${ENTORNO:-desarrollo}
+  API_DOCS: ${API_DOCS:-}
+  API_AUTENTICACION: ${API_AUTENTICACION:-activa}
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+  NOTIFICACION_CANALES: ${NOTIFICACION_CANALES:-correo,whatsapp}
+  NOTIFICACION_SEVERIDADES: ${NOTIFICACION_SEVERIDADES:-critica}
+  NOTIFICACION_CORREO: ${NOTIFICACION_CORREO:-}
+  NOTIFICACION_WHATSAPP: ${NOTIFICACION_WHATSAPP:-}
+  NOTIFICACION_SMTP_HOST: ${NOTIFICACION_SMTP_HOST:-}
+  NOTIFICACION_SMTP_PUERTO: ${NOTIFICACION_SMTP_PUERTO:-587}
+  NOTIFICACION_SMTP_USUARIO: ${NOTIFICACION_SMTP_USUARIO:-}
+  NOTIFICACION_SMTP_CLAVE: ${NOTIFICACION_SMTP_CLAVE:-}
+  NOTIFICACION_SMTP_REMITENTE: ${NOTIFICACION_SMTP_REMITENTE:-}
+  NOTIFICACION_WHATSAPP_TOKEN: ${NOTIFICACION_WHATSAPP_TOKEN:-}
+  NOTIFICACION_WHATSAPP_TELEFONO_ID: ${NOTIFICACION_WHATSAPP_TELEFONO_ID:-}
+  NOTIFICACION_WHATSAPP_PLANTILLA: ${NOTIFICACION_WHATSAPP_PLANTILLA:-}
+  CICLO_SEGMENTOS: ${CICLO_SEGMENTOS:-activa}
+
+services:
+  db:
+    image: postgis/postgis:14-3.5
+    environment:
+      POSTGRES_DB: ${AI_DB_NAME:-frecuencias}
+      POSTGRES_USER: ${AI_DB_USER:-frecuencias}
+      POSTGRES_PASSWORD: ${AI_DB_PASSWORD:?Defina AI_DB_PASSWORD en .env}
+      TZ: UTC
+      PGTZ: UTC
+    ports:
+      - "${AI_DB_PORT:-5433}:5432"
+    volumes:
+      - datos_ai:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  api:
+    build: .
+    environment: *base-ia
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - ./datos:/app/datos:ro
+      - ./modelos:/app/modelos
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/salud')\""]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    restart: unless-stopped
+
+  programador:
+    build: .
+    profiles: ["programador"]
+    command: ["python", "-m", "frecuencias.operacion.programador"]
+    environment:
+      <<: *base-ia
+      CICLO_CRON: ${CICLO_CRON:-15 * * * *}
+      CICLO_ORIGEN: ${CICLO_ORIGEN:-base}
+      CICLO_REENTRENAR: ${CICLO_REENTRENAR:-auto}
+    depends_on:
+      api:
+        condition: service_healthy
+    volumes:
+      - ./datos:/app/datos:ro
+      - ./modelos:/app/modelos
+    restart: unless-stopped
+
+volumes:
+  datos_ai:
