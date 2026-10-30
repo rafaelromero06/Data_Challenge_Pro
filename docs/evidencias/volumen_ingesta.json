@@ -1,0 +1,33 @@
+{
+ "migraciones_s": 0.9,
+ "primera_carga": {
+  "registros": 808345,
+  "segundos": 148.6,
+  "registros_por_segundo": 5438,
+  "pico_python_mb": 696.8,
+  "rss_mb": 256.0,
+  "pico_rss_mb": 964.3,
+  "filas_en_base": {
+   "demand_history": 243508,
+   "trip_history": 564837
+  },
+  "rechazados": 0,
+  "problemas_calidad": 18330
+ },
+ "carga_repetida": {
+  "registros": 808345,
+  "segundos": 152.3,
+  "registros_por_segundo": 5307,
+  "pico_python_mb": 696.6,
+  "rss_mb": 253.5,
+  "pico_rss_mb": 964.3,
+  "filas_en_base": {
+   "demand_history": 243508,
+   "trip_history": 564837
+  },
+  "rechazados": 0,
+  "problemas_calidad": 18330
+ },
+ "carga_repetida_no_duplica": true,
+ "cumple_rnf_003": true
+}

@@ -1,0 +1,2855 @@
+{
+ "openapi": "3.1.0",
+ "info": {
+  "title": "SOBUSA - Frecuencias inteligentes",
+  "description": "Prediccion de demanda por ruta y franja de 15 min con intervalo de confianza, recomendacion de frecuencia, alertas operativas y ciclo incremental con reentrenamiento controlado.",
+  "version": "v3-sensores-3anios"
+ },
+ "paths": {
+  "/api/v1/salud": {
+   "get": {
+    "summary": "Salud",
+    "operationId": "salud_api_v1_salud_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/rutas": {
+   "get": {
+    "summary": "Rutas",
+    "operationId": "rutas_api_v1_rutas_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/Ruta"
+         },
+         "type": "array",
+         "title": "Response Rutas Api V1 Rutas Get"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "APIKeyHeader": []
+     }
+    ]
+   }
+  },
+  "/api/v1/predictions/run": {
+   "post": {
+    "summary": "Correr Prediccion",
+    "operationId": "correr_prediccion_api_v1_predictions_run_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PeticionPrediccion"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/RespuestaEjecucionPrediccion"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "APIKeyHeader": []
+     }
+    ]
+   }
+  },
+  "/api/v1/recommendations/calculate": {
+   "post": {
+    "summary": "Calcular Recomendacion",
+    "operationId": "calcular_recomendacion_api_v1_recommendations_calculate_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PeticionPrediccion"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "APIKeyHeader": []
+     }
+    ]
+   }
+  },
+  "/api/v1/predictions": {
+   "get": {
+    "summary": "Listar Predicciones",
+    "operationId": "listar_predicciones_api_v1_predictions_get",
+    "security": [
+     {
+      "APIKeyHeader": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "routeId",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Routeid"
+      }
+     },
+     {
+      "name": "horizonMinutes",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Horizonminutes"
+      }
+     },
+     {
+      "name": "from",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date-time"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "From"
+      }
+     },
+     {
+      "name": "to",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date-time"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "To"
+      }
+     },
+     {
+      "name": "modelId",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Modelid"
+      }
+     },
+     {
+      "name": "executionId",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Executionid"
+      }
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 1,
+       "title": "Page"
+      }
+     },
+     {
+      "name": "size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 50,
+       "title": "Size"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Pagina"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/predictions/{prediction_id}/segments": {
+   "get": {
+    "summary": "Segmentos De Prediccion",
+    "operationId": "segmentos_de_prediccion_api_v1_predictions__prediction_id__segments_get",
+    "security": [
+     {
+      "APIKeyHeader": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "prediction_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Prediction Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/segments": {
+   "get": {
+    "summary": "Listar Segmentos",
+    "operationId": "listar_segmentos_api_v1_segments_get",
+    "security": [
+     {
+      "APIKeyHeader": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "routeId",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Routeid"
+      }
+     },
+     {
+      "name": "geometry",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "default": false,
+       "title": "Geometry"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/segments/map": {
+   "get": {
+    "summary": "Mapa De Segmentos",
+    "operationId": "mapa_de_segmentos_api_v1_segments_map_get",
+    "security": [
+     {
+      "APIKeyHeader": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "dayType",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "enum": [
+        "habil",
+        "sabado",
+        "dom_fest"
+       ],
+       "type": "string",
+       "default": "habil",
+       "title": "Daytype"
+      }
+     },
+     {
+      "name": "hour",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 23,
+       "minimum": 0,
+       "default": 7,
+       "title": "Hour"
+      }
+     },
+     {
+      "name": "routeId",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Routeid"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/segments/profile": {
+   "get": {
+    "summary": "Perfil Por Segmento",
+    "operationId": "perfil_por_segmento_api_v1_segments_profile_get",
+    "security": [
+     {
+      "APIKeyHeader": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "routeId",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Routeid"
+      }
+     },
+     {
+      "name": "dayType",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "enum": [
+        "habil",
+        "sabado",
+        "dom_fest"
+       ],
+       "type": "string",
+       "default": "habil",
+       "title": "Daytype"
+      }
+     },
+     {
+      "name": "hour",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 23,
+       "minimum": 0,
+       "default": 7,
+       "title": "Hour"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/recommendations": {
+   "get": {
+    "summary": "Listar Recomendaciones",
+    "operationId": "listar_recomendaciones_api_v1_recommendations_get",
+    "security": [
+     {
+      "APIKeyHeader": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "routeId",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Routeid"
+      }
+     },
+     {
+      "name": "from",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date-time"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "From"
+      }
+     },
+     {
+      "name": "to",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date-time"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "To"
+      }
+     },
+     {
+      "name": "viable",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "boolean"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Viable"
+      }
+     },
+     {
+      "name": "executionId",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Executionid"
+      }
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 1,
+       "title": "Page"
+      }
+     },
+     {
+      "name": "size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 50,
+       "title": "Size"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Pagina"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/overview": {
+   "get": {
+    "summary": "Resumen Del Dia",
+    "operationId": "resumen_del_dia_api_v1_overview_get",
+    "security": [
+     {
+      "APIKeyHeader": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "day",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Day"
+      }
+     },
+     {
+      "name": "at",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date-time"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "At"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/alerts": {
+   "get": {
+    "summary": "Listar Alertas",
+    "operationId": "listar_alertas_api_v1_alerts_get",
+    "security": [
+     {
+      "APIKeyHeader": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "status",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Status"
+      }
+     },
+     {
+      "name": "severity",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Severity"
+      }
+     },
+     {
+      "name": "code",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Code"
+      }
+     },
+     {
+      "name": "routeId",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Routeid"
+      }
+     },
+     {
+      "name": "from",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date-time"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "From"
+      }
+     },
+     {
+      "name": "to",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date-time"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "To"
+      }
+     },
+     {
+      "name": "windowFrom",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date-time"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Windowfrom"
+      }
+     },
+     {
+      "name": "windowTo",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date-time"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Windowto"
+      }
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 1,
+       "title": "Page"
+      }
+     },
+     {
+      "name": "size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 50,
+       "title": "Size"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Pagina"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/alerts/groups": {
+   "get": {
+    "summary": "Agrupar Alertas",
+    "operationId": "agrupar_alertas_api_v1_alerts_groups_get",
+    "security": [
+     {
+      "APIKeyHeader": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "status",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Status"
+      }
+     },
+     {
+      "name": "severity",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Severity"
+      }
+     },
+     {
+      "name": "code",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Code"
+      }
+     },
+     {
+      "name": "routeId",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Routeid"
+      }
+     },
+     {
+      "name": "windowFrom",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date-time"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Windowfrom"
+      }
+     },
+     {
+      "name": "windowTo",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date-time"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Windowto"
+      }
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 1,
+       "title": "Page"
+      }
+     },
+     {
+      "name": "size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 50,
+       "title": "Size"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Pagina"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/alerts/status": {
+   "post": {
+    "summary": "Cambiar Estado Alertas",
+    "operationId": "cambiar_estado_alertas_api_v1_alerts_status_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PeticionEstadoAlertas"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "APIKeyHeader": []
+     }
+    ]
+   }
+  },
+  "/api/v1/alerts/summary": {
+   "get": {
+    "summary": "Resumir Alertas",
+    "operationId": "resumir_alertas_api_v1_alerts_summary_get",
+    "security": [
+     {
+      "APIKeyHeader": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "routeId",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Routeid"
+      }
+     },
+     {
+      "name": "from",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date-time"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "From"
+      }
+     },
+     {
+      "name": "to",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date-time"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "To"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/alerts/{id_alerta}": {
+   "get": {
+    "summary": "Obtener Alerta",
+    "operationId": "obtener_alerta_api_v1_alerts__id_alerta__get",
+    "security": [
+     {
+      "APIKeyHeader": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "id_alerta",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Id Alerta"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/alerts/{id_alerta}/status": {
+   "patch": {
+    "summary": "Cambiar Estado Alerta",
+    "operationId": "cambiar_estado_alerta_api_v1_alerts__id_alerta__status_patch",
+    "security": [
+     {
+      "APIKeyHeader": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "id_alerta",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Id Alerta"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PeticionEstadoAlerta"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/frequency/executions": {
+   "post": {
+    "summary": "Crear Ejecucion",
+    "operationId": "crear_ejecucion_api_v1_frequency_executions_post",
+    "security": [
+     {
+      "APIKeyHeader": []
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PeticionEjecucion"
+       }
+      }
+     }
+    },
+    "responses": {
+     "202": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "get": {
+    "summary": "Listar Ejecuciones",
+    "operationId": "listar_ejecuciones_api_v1_frequency_executions_get",
+    "security": [
+     {
+      "APIKeyHeader": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "type",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Type"
+      }
+     },
+     {
+      "name": "status",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Status"
+      }
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 1,
+       "title": "Page"
+      }
+     },
+     {
+      "name": "size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 50,
+       "title": "Size"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Pagina"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/frequency/executions/{id_ejecucion}/retry": {
+   "post": {
+    "summary": "Reintentar Ejecucion",
+    "operationId": "reintentar_ejecucion_api_v1_frequency_executions__id_ejecucion__retry_post",
+    "security": [
+     {
+      "APIKeyHeader": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "id_ejecucion",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Id Ejecucion"
+      }
+     }
+    ],
+    "responses": {
+     "202": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/frequency/executions/{id_ejecucion}": {
+   "get": {
+    "summary": "Obtener Ejecucion",
+    "operationId": "obtener_ejecucion_api_v1_frequency_executions__id_ejecucion__get",
+    "security": [
+     {
+      "APIKeyHeader": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "id_ejecucion",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Id Ejecucion"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/monitoring": {
+   "get": {
+    "summary": "Ultimo Monitoreo",
+    "operationId": "ultimo_monitoreo_api_v1_monitoring_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "APIKeyHeader": []
+     }
+    ]
+   }
+  },
+  "/api/v1/monitoring/history": {
+   "get": {
+    "summary": "Historial Monitoreo",
+    "operationId": "historial_monitoreo_api_v1_monitoring_history_get",
+    "security": [
+     {
+      "APIKeyHeader": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "metric",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Metric"
+      }
+     },
+     {
+      "name": "scope",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Scope"
+      }
+     },
+     {
+      "name": "from",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date-time"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "From"
+      }
+     },
+     {
+      "name": "to",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date-time"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "To"
+      }
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 1,
+       "title": "Page"
+      }
+     },
+     {
+      "name": "size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 50,
+       "title": "Size"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Pagina"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/data-quality": {
+   "get": {
+    "summary": "Listar Problemas Calidad",
+    "operationId": "listar_problemas_calidad_api_v1_data_quality_get",
+    "security": [
+     {
+      "APIKeyHeader": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "executionId",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Executionid"
+      }
+     },
+     {
+      "name": "rule",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Rule"
+      }
+     },
+     {
+      "name": "dimension",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Dimension"
+      }
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 1,
+       "title": "Page"
+      }
+     },
+     {
+      "name": "size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 50,
+       "title": "Size"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Pagina"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/notifications": {
+   "get": {
+    "summary": "Listar Notificaciones",
+    "operationId": "listar_notificaciones_api_v1_notifications_get",
+    "security": [
+     {
+      "APIKeyHeader": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "alertId",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Alertid"
+      }
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 1,
+       "title": "Page"
+      }
+     },
+     {
+      "name": "size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 50,
+       "title": "Size"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Pagina"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/models": {
+   "get": {
+    "summary": "Listar Modelos",
+    "operationId": "listar_modelos_api_v1_models_get",
+    "security": [
+     {
+      "APIKeyHeader": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "horizonMinutes",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Horizonminutes"
+      }
+     },
+     {
+      "name": "status",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Status"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/models/{id_modelo}/activate": {
+   "post": {
+    "summary": "Activar Modelo",
+    "operationId": "activar_modelo_api_v1_models__id_modelo__activate_post",
+    "security": [
+     {
+      "APIKeyHeader": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "id_modelo",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Id Modelo"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PeticionActivacion"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/parameters": {
+   "get": {
+    "summary": "Listar Parametros",
+    "operationId": "listar_parametros_api_v1_parameters_get",
+    "security": [
+     {
+      "APIKeyHeader": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "onlyCurrent",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "default": true,
+       "title": "Onlycurrent"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/parameters/{clave}": {
+   "put": {
+    "summary": "Publicar Parametro",
+    "operationId": "publicar_parametro_api_v1_parameters__clave__put",
+    "security": [
+     {
+      "APIKeyHeader": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "clave",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Clave"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PeticionParametro"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/export/{recurso}": {
+   "get": {
+    "summary": "Exportar",
+    "operationId": "exportar_api_v1_export__recurso__get",
+    "security": [
+     {
+      "APIKeyHeader": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "recurso",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "enum": [
+        "predictions",
+        "recommendations",
+        "alerts",
+        "executions",
+        "data-quality"
+       ],
+       "type": "string",
+       "title": "Recurso"
+      }
+     },
+     {
+      "name": "format",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "enum": [
+        "csv",
+        "xlsx"
+       ],
+       "type": "string",
+       "default": "csv",
+       "title": "Format"
+      }
+     },
+     {
+      "name": "routeId",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Routeid"
+      }
+     },
+     {
+      "name": "from",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date-time"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "From"
+      }
+     },
+     {
+      "name": "to",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date-time"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "To"
+      }
+     },
+     {
+      "name": "executionId",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Executionid"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ },
+ "components": {
+  "schemas": {
+   "HTTPValidationError": {
+    "properties": {
+     "detail": {
+      "items": {
+       "$ref": "#/components/schemas/ValidationError"
+      },
+      "type": "array",
+      "title": "Detail"
+     }
+    },
+    "type": "object",
+    "title": "HTTPValidationError"
+   },
+   "Intervalo": {
+    "properties": {
+     "lower": {
+      "type": "number",
+      "title": "Lower"
+     },
+     "upper": {
+      "type": "number",
+      "title": "Upper"
+     },
+     "level": {
+      "type": "number",
+      "title": "Level"
+     }
+    },
+    "type": "object",
+    "required": [
+     "lower",
+     "upper",
+     "level"
+    ],
+    "title": "Intervalo"
+   },
+   "Pagina": {
+    "properties": {
+     "items": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Items"
+     },
+     "page": {
+      "type": "integer",
+      "title": "Page"
+     },
+     "size": {
+      "type": "integer",
+      "title": "Size"
+     },
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     }
+    },
+    "type": "object",
+    "required": [
+     "items",
+     "page",
+     "size",
+     "total"
+    ],
+    "title": "Pagina"
+   },
+   "PeticionActivacion": {
+    "properties": {
+     "usuario": {
+      "anyOf": [
+       {
+        "type": "string",
+        "minLength": 1
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Usuario",
+      "description": "Solo si la autenticacion esta desactivada; si no, se registra el nombre de la clave"
+     }
+    },
+    "type": "object",
+    "title": "PeticionActivacion"
+   },
+   "PeticionEjecucion": {
+    "properties": {
+     "origen": {
+      "type": "string",
+      "enum": [
+       "base",
+       "archivos"
+      ],
+      "title": "Origen",
+      "default": "base"
+     },
+     "dias": {
+      "type": "integer",
+      "maximum": 31.0,
+      "minimum": 1.0,
+      "title": "Dias",
+      "default": 1
+     },
+     "reentrenar": {
+      "type": "string",
+      "enum": [
+       "auto",
+       "siempre",
+       "nunca"
+      ],
+      "title": "Reentrenar",
+      "default": "auto"
+     }
+    },
+    "type": "object",
+    "title": "PeticionEjecucion"
+   },
+   "PeticionEstadoAlerta": {
+    "properties": {
+     "estado": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "reconocida",
+         "asignada",
+         "cerrada",
+         "descartada"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Estado"
+     },
+     "usuario": {
+      "anyOf": [
+       {
+        "type": "string",
+        "minLength": 1
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Usuario",
+      "description": "Solo si la autenticacion esta desactivada; si no, se registra el nombre de la clave"
+     },
+     "comentario": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Comentario"
+     },
+     "usuario_asignado": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Usuario Asignado"
+     }
+    },
+    "type": "object",
+    "title": "PeticionEstadoAlerta"
+   },
+   "PeticionEstadoAlertas": {
+    "properties": {
+     "estado": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "reconocida",
+         "asignada",
+         "cerrada",
+         "descartada"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Estado"
+     },
+     "usuario": {
+      "anyOf": [
+       {
+        "type": "string",
+        "minLength": 1
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Usuario",
+      "description": "Solo si la autenticacion esta desactivada; si no, se registra el nombre de la clave"
+     },
+     "comentario": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Comentario"
+     },
+     "usuario_asignado": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Usuario Asignado"
+     },
+     "ids": {
+      "items": {
+       "type": "string",
+       "format": "uuid"
+      },
+      "type": "array",
+      "maxItems": 500,
+      "minItems": 1,
+      "title": "Ids"
+     }
+    },
+    "type": "object",
+    "required": [
+     "ids"
+    ],
+    "title": "PeticionEstadoAlertas"
+   },
+   "PeticionParametro": {
+    "properties": {
+     "valor": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Valor"
+     },
+     "usuario": {
+      "anyOf": [
+       {
+        "type": "string",
+        "minLength": 1
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Usuario",
+      "description": "Solo si la autenticacion esta desactivada; si no, se registra el nombre de la clave"
+     },
+     "id_ruta": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Id Ruta"
+     },
+     "unidad": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Unidad"
+     },
+     "descripcion": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Descripcion"
+     },
+     "validado": {
+      "type": "boolean",
+      "title": "Validado",
+      "default": false
+     }
+    },
+    "type": "object",
+    "required": [
+     "valor"
+    ],
+    "title": "PeticionParametro"
+   },
+   "PeticionPrediccion": {
+    "properties": {
+     "id_ruta": {
+      "type": "integer",
+      "title": "Id Ruta"
+     },
+     "referencia": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Referencia",
+      "description": "Hora local de referencia; por defecto la ultima franja con datos"
+     },
+     "guardar": {
+      "type": "boolean",
+      "title": "Guardar",
+      "description": "Guarda predicciones, recomendaciones y alertas en ai_frecuencias",
+      "default": true
+     }
+    },
+    "type": "object",
+    "required": [
+     "id_ruta"
+    ],
+    "title": "PeticionPrediccion"
+   },
+   "PrediccionRespuesta": {
+    "properties": {
+     "predictionId": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Predictionid",
+      "description": "Identificador de la prediccion guardada en ai_frecuencias"
+     },
+     "routeId": {
+      "type": "integer",
+      "title": "Routeid"
+     },
+     "generatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Generatedat"
+     },
+     "referenceTime": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Referencetime",
+      "description": "Ultima franja de 15 min cuyo dato se da por conocido (hora local)"
+     },
+     "targetSlot": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Targetslot",
+      "description": "Inicio de la franja de 15 min que se predice (hora local)"
+     },
+     "horizonMinutes": {
+      "type": "integer",
+      "title": "Horizonminutes"
+     },
+     "modelHorizonMinutes": {
+      "type": "integer",
+      "title": "Modelhorizonminutes"
+     },
+     "predictedPassengers": {
+      "type": "number",
+      "title": "Predictedpassengers"
+     },
+     "confidenceInterval": {
+      "$ref": "#/components/schemas/Intervalo"
+     },
+     "intervalCalibrated": {
+      "type": "boolean",
+      "title": "Intervalcalibrated",
+      "description": "False en franjas sin servicio habitual: el intervalo es la prediccion puntual mas o menos el ajuste conforme",
+      "default": true
+     },
+     "actualPassengers": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Actualpassengers",
+      "description": "Valor observado, solo si la franja ya esta en el historico"
+     },
+     "baselinePassengers": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Baselinepassengers",
+      "description": "Promedio de la misma franja en las 4 semanas previas"
+     },
+     "usualService": {
+      "type": "boolean",
+      "title": "Usualservice"
+     },
+     "modelVersion": {
+      "type": "string",
+      "title": "Modelversion"
+     },
+     "featureVersion": {
+      "type": "string",
+      "title": "Featureversion"
+     },
+     "latencyMs": {
+      "type": "number",
+      "title": "Latencyms"
+     },
+     "recommendation": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/RecomendacionResumida"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "explanation": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Explanation"
+     },
+     "explanationDetail": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Explanationdetail"
+     }
+    },
+    "type": "object",
+    "required": [
+     "predictionId",
+     "routeId",
+     "generatedAt",
+     "referenceTime",
+     "targetSlot",
+     "horizonMinutes",
+     "modelHorizonMinutes",
+     "predictedPassengers",
+     "confidenceInterval",
+     "actualPassengers",
+     "baselinePassengers",
+     "usualService",
+     "modelVersion",
+     "featureVersion",
+     "latencyMs",
+     "recommendation",
+     "explanation",
+     "explanationDetail"
+    ],
+    "title": "PrediccionRespuesta"
+   },
+   "RecomendacionResumida": {
+    "properties": {
+     "headwayMinutes": {
+      "type": "number",
+      "title": "Headwayminutes"
+     },
+     "busesPerHour": {
+      "type": "integer",
+      "title": "Busesperhour"
+     },
+     "vehiclesRequired": {
+      "type": "integer",
+      "title": "Vehiclesrequired"
+     },
+     "viable": {
+      "type": "boolean",
+      "title": "Viable"
+     }
+    },
+    "type": "object",
+    "required": [
+     "headwayMinutes",
+     "busesPerHour",
+     "vehiclesRequired",
+     "viable"
+    ],
+    "title": "RecomendacionResumida"
+   },
+   "RespuestaEjecucionPrediccion": {
+    "properties": {
+     "routeId": {
+      "type": "integer",
+      "title": "Routeid"
+     },
+     "routeName": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Routename"
+     },
+     "referenceTime": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Referencetime"
+     },
+     "executionId": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Executionid"
+     },
+     "saved": {
+      "type": "boolean",
+      "title": "Saved"
+     },
+     "predictions": {
+      "items": {
+       "$ref": "#/components/schemas/PrediccionRespuesta"
+      },
+      "type": "array",
+      "title": "Predictions"
+     },
+     "recommendations": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Recommendations"
+     },
+     "alerts": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Alerts"
+     }
+    },
+    "type": "object",
+    "required": [
+     "routeId",
+     "routeName",
+     "referenceTime",
+     "executionId",
+     "saved",
+     "predictions",
+     "recommendations",
+     "alerts"
+    ],
+    "title": "RespuestaEjecucionPrediccion"
+   },
+   "Ruta": {
+    "properties": {
+     "id_ruta": {
+      "type": "integer",
+      "title": "Id Ruta"
+     },
+     "nombre": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Nombre"
+     },
+     "primera_franja": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Primera Franja"
+     },
+     "ultima_franja": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Ultima Franja"
+     },
+     "franjas_con_servicio": {
+      "type": "integer",
+      "title": "Franjas Con Servicio"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id_ruta",
+     "nombre",
+     "primera_franja",
+     "ultima_franja",
+     "franjas_con_servicio"
+    ],
+    "title": "Ruta"
+   },
+   "ValidationError": {
+    "properties": {
+     "loc": {
+      "items": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "integer"
+        }
+       ]
+      },
+      "type": "array",
+      "title": "Location"
+     },
+     "msg": {
+      "type": "string",
+      "title": "Message"
+     },
+     "type": {
+      "type": "string",
+      "title": "Error Type"
+     },
+     "input": {
+      "title": "Input"
+     },
+     "ctx": {
+      "type": "object",
+      "title": "Context"
+     }
+    },
+    "type": "object",
+    "required": [
+     "loc",
+     "msg",
+     "type"
+    ],
+    "title": "ValidationError"
+   }
+  },
+  "securitySchemes": {
+   "APIKeyHeader": {
+    "type": "apiKey",
+    "description": "Clave de acceso; se crea con python -m frecuencias.seguridad crear",
+    "in": "header",
+    "name": "X-API-Key"
+   }
+  }
+ }
+}

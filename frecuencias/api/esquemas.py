@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime
 from typing import Annotated, Literal
 
@@ -81,6 +82,10 @@ class PeticionEstadoAlerta(BaseModel):
     usuario: Usuario = None
     comentario: str | None = None
     usuario_asignado: str | None = None
+
+
+class PeticionEstadoAlertas(PeticionEstadoAlerta):
+    ids: list[uuid.UUID] = Field(min_length=1, max_length=500)
 
 
 class PeticionEjecucion(BaseModel):

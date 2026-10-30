@@ -1,0 +1,100 @@
+{
+ "dia": "2025-11-11",
+ "solo_lectura": "on",
+ "statement_timeout": "5min",
+ "viajes_del_rango": {
+  "planificacion_ms": 12.4,
+  "ejecucion_ms": 5.7,
+  "filas": 1461,
+  "nodos": [
+   {
+    "nivel": 0,
+    "nodo": "Index Scan",
+    "tabla": "progvehiculos",
+    "indice": "idx_progvehiculos_fecha1",
+    "filas": 1461,
+    "ms": 5.5,
+    "bloques_cache": 1268,
+    "bloques_disco": 13
+   }
+  ],
+  "lecturas_secuenciales": []
+ },
+ "viajes": 1461,
+ "conteo_agregado": {
+  "planificacion_ms": 10.3,
+  "ejecucion_ms": 5583.2,
+  "filas": 703,
+  "nodos": [
+   {
+    "nivel": 0,
+    "nodo": "Aggregate",
+    "tabla": null,
+    "indice": null,
+    "filas": 703,
+    "ms": 5577.2,
+    "bloques_cache": 413981,
+    "bloques_disco": 73050
+   },
+   {
+    "nivel": 1,
+    "nodo": "Sort",
+    "tabla": null,
+    "indice": null,
+    "filas": 447053,
+    "ms": 5182.0,
+    "bloques_cache": 413981,
+    "bloques_disco": 73042
+   },
+   {
+    "nivel": 2,
+    "nodo": "Merge Join",
+    "tabla": null,
+    "indice": null,
+    "filas": 447053,
+    "ms": 4844.4,
+    "bloques_cache": 413978,
+    "bloques_disco": 73042
+   },
+   {
+    "nivel": 3,
+    "nodo": "Index Scan",
+    "tabla": "conteo_pasajeros_destino",
+    "indice": "idx_conteo_pasajeros_destino_idprog",
+    "filas": 447053,
+    "ms": 1137.6,
+    "bloques_cache": 6496,
+    "bloques_disco": 13688
+   },
+   {
+    "nivel": 3,
+    "nodo": "Index Scan",
+    "tabla": "progvehiculos",
+    "indice": "progvehiculos_pkey",
+    "filas": 540976,
+    "ms": 3512.0,
+    "bloques_cache": 407482,
+    "bloques_disco": 59354
+   }
+  ],
+  "lecturas_secuenciales": []
+ },
+ "lecturas_por_segmento": {
+  "planificacion_ms": 8.5,
+  "ejecucion_ms": 129.6,
+  "filas": 199525,
+  "nodos": [
+   {
+    "nivel": 0,
+    "nodo": "Index Scan",
+    "tabla": "conteo_pasajeros_destino",
+    "indice": "idx_conteo_pasajeros_destino_idprog",
+    "filas": 199525,
+    "ms": 118.4,
+    "bloques_cache": 20178,
+    "bloques_disco": 0
+   }
+  ],
+  "lecturas_secuenciales": []
+ }
+}

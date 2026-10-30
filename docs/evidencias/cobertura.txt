@@ -1,0 +1,44 @@
+Name                                           Stmts   Miss  Cover
+------------------------------------------------------------------
+frecuencias\ingesta\extraccion.py                 46     46     0%
+frecuencias\inferencia\diagnostico.py             26     18    31%
+frecuencias\inferencia\ajuste.py                  40     27    32%
+frecuencias\inferencia\entrenamiento.py          113     76    33%
+frecuencias\operacion\reentrenamiento.py          64     39    39%
+frecuencias\ingesta\historico.py                 155     94    39%
+frecuencias\analitica\carga.py                    38     22    42%
+frecuencias\segmentos\carga.py                   175     84    52%
+frecuencias\operacion\ciclo.py                   297    130    56%
+frecuencias\inferencia\evaluacion.py              41     15    63%
+frecuencias\operacion\programador.py              70     22    69%
+frecuencias\seguridad.py                          61     19    69%
+frecuencias\persistencia\roles.py                 56     14    75%
+frecuencias\inferencia\retencion.py               70     16    77%
+frecuencias\persistencia\calidad.py               21      4    81%
+frecuencias\api\main.py                          476     90    81%
+frecuencias\inferencia\cuantiles.py               32      6    81%
+frecuencias\persistencia\monitoreo.py             42      7    83%
+frecuencias\persistencia\parametros.py            33      5    85%
+frecuencias\persistencia\predicciones.py          29      4    86%
+frecuencias\api\errores.py                        31      4    87%
+frecuencias\persistencia\recomendaciones.py       26      3    88%
+frecuencias\persistencia\registro_modelos.py      41      4    90%
+frecuencias\persistencia\consultas.py             13      1    92%
+frecuencias\segmentos\consultas.py                70      5    93%
+frecuencias\db.py                                 29      2    93%
+frecuencias\persistencia\alertas.py              127      8    94%
+frecuencias\inferencia\artefactos.py              74      4    95%
+frecuencias\operacion\servicio.py                 38      2    95%
+frecuencias\alertas\reglas.py                     99      4    96%
+frecuencias\operacion\trabajos.py                 76      3    96%
+frecuencias\operacion\pronostico.py               26      1    96%
+frecuencias\operacion\recomendacion.py            53      2    96%
+frecuencias\persistencia\tablas.py                31      1    97%
+frecuencias\alertas\notificaciones.py            104      3    97%
+frecuencias\analitica\calidad.py                  87      2    98%
+frecuencias\resiliencia.py                        58      1    98%
+frecuencias\trazas.py                             70      1    99%
+------------------------------------------------------------------
+TOTAL                                           3678    789    79%
+
+26 files skipped due to complete coverage.

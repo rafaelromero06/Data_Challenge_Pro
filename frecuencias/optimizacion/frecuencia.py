@@ -1,5 +1,6 @@
 import math
 
+from frecuencias.optimizacion.objetivo import optimizar
 from frecuencias.optimizacion.parametros import ParametrosHora
 
 OCUPACIONES_SENSIBILIDAD = (0.65, 0.75, 0.85)
@@ -9,29 +10,33 @@ def buses_necesarios(carga: float, capacidad: float, ocupacion: float) -> int:
     return math.ceil(carga / (capacidad * ocupacion)) if carga > 0 else 0
 
 
+def vehiculos_requeridos(buses: int, p: ParametrosHora, despachos_en_ruta: int | None) -> tuple[int, str]:
+    if despachos_en_ruta is None:
+        return math.ceil(p.tiempo_ciclo_min * buses / 60), "ciclo_sobre_headway"
+    return despachos_en_ruta + buses, "despachos_en_ventana_de_ciclo"
+
+
+def tope_por_flota(p: ParametrosHora, despachos_en_ruta: int | None) -> int | None:
+    if p.flota_disponible is None:
+        return None
+    if despachos_en_ruta is None:
+        return math.floor(p.flota_disponible * 60 / p.tiempo_ciclo_min)
+    return p.flota_disponible - despachos_en_ruta
+
+
 def recomendar(demanda_hora: float, demanda_hora_alta: float | None, p: ParametrosHora,
                buses_actual: float | None = None, despachos_en_ruta: int | None = None) -> dict:
     demanda_alta = max(demanda_hora, demanda_hora_alta if demanda_hora_alta is not None else demanda_hora)
     carga = demanda_hora * p.factor_carga
     carga_alta = demanda_alta * p.factor_carga
     capacidad_efectiva = p.capacidad * p.ocupacion_objetivo
-    por_demanda = buses_necesarios(carga_alta, p.capacidad, p.ocupacion_objetivo)
-    por_servicio = math.ceil(60 / p.headway_maximo)
-    buses = max(por_demanda, por_servicio, 1)
-    limitado_por = "demanda" if por_demanda >= por_servicio else "servicio_minimo"
-    motivos = []
-    tope = math.floor(60 / p.headway_minimo)
-    if buses > tope:
-        motivos.append(f"La demanda exige {buses} buses por hora y el headway minimo de {p.headway_minimo:g} min "
-                       f"solo permite {tope}")
-        buses, limitado_por = tope, "headway_minimo"
+    linea_base = max(buses_necesarios(carga_alta, p.capacidad, p.ocupacion_objetivo),
+                     math.ceil(60 / p.headway_maximo), 1)
+    objetivo = optimizar(demanda_hora, demanda_alta, p, buses_actual, tope_por_flota(p, despachos_en_ruta))
+    buses, limitado_por = objetivo["buses"], objetivo["limitado_por"]
+    motivos = list(objetivo["motivos"])
     headway = 60 / buses
-    if despachos_en_ruta is None:
-        vehiculos = math.ceil(p.tiempo_ciclo_min / headway)
-        metodo_vehiculos = "ciclo_sobre_headway"
-    else:
-        vehiculos = despachos_en_ruta + buses
-        metodo_vehiculos = "despachos_en_ventana_de_ciclo"
+    vehiculos, metodo_vehiculos = vehiculos_requeridos(buses, p, despachos_en_ruta)
     if p.flota_disponible is not None and vehiculos > p.flota_disponible:
         motivos.append(f"Se requieren {vehiculos} vehiculos y la flota disponible es {p.flota_disponible}")
     ocupacion_actual = None
@@ -55,6 +60,9 @@ def recomendar(demanda_hora: float, demanda_hora_alta: float | None, p: Parametr
         "limitado_por": limitado_por,
         "metodo_vehiculos": metodo_vehiculos,
         "sensibilidad": sensibilidad(demanda_hora, demanda_alta, p),
+        "linea_base": {"buses_por_hora": int(min(linea_base, math.floor(60 / p.headway_minimo))),
+                       "metodo": "ceil(carga_p90 / capacidad_efectiva), minimo por headway maximo"},
+        "objetivo": objetivo,
     }
 
 

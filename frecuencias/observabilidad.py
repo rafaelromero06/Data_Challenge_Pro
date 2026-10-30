@@ -11,6 +11,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
+from frecuencias import trazas
+
 CABECERA_CORRELACION = "X-Correlation-Id"
 
 PETICIONES = Counter("frecuencias_peticiones_total", "Peticiones HTTP atendidas", ["metodo", "ruta", "estado"])
@@ -23,6 +25,14 @@ CIRCUITOS = Gauge("frecuencias_circuito_abierto", "1 si el circuito de la integr
                   ["integracion"])
 LATENCIA_DATOS = Gauge("frecuencias_latencia_datos_horas", "Horas entre la ultima franja recibida y la ejecucion")
 NOTIFICACIONES = Counter("frecuencias_notificaciones_total", "Notificaciones por canal y estado", ["canal", "estado"])
+MONITOREO = Gauge("frecuencias_monitoreo", "Ultimo valor de las metricas de monitoreo del modelo y los datos",
+                  ["metrica", "alcance"])
+AVANCE = Gauge("frecuencias_ejecucion_avance", "Avance en porcentaje del ultimo ciclo en curso", ["tipo"])
+
+
+def _agregar_traza(_, __, evento: dict) -> dict:
+    evento.update(trazas.ids_actuales())
+    return evento
 
 
 def configurar_logs() -> None:
@@ -31,6 +41,7 @@ def configurar_logs() -> None:
     structlog.configure(
         processors=[
             structlog.contextvars.merge_contextvars,
+            _agregar_traza,
             structlog.processors.add_log_level,
             structlog.processors.TimeStamper(fmt="iso", utc=True),
             structlog.processors.StackInfoRenderer(),
@@ -80,6 +91,7 @@ class MiddlewareCorrelacion(BaseHTTPMiddleware):
         request.state.correlation_id = correlation_id
         structlog.contextvars.clear_contextvars()
         structlog.contextvars.bind_contextvars(correlation_id=correlation_id)
+        trazas.anotar(correlation_id=correlation_id)
         inicio = time.perf_counter()
         respuesta = await call_next(request)
         ruta = request.scope.get("route")

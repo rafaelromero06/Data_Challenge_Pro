@@ -22,6 +22,16 @@ GENERALES = {
     "umbral_alta_demanda": 100.0,
     "tolerancia_frecuencia_buses": 2.0,
     "tolerancia_frecuencia_pct": 15.0,
+    "peso_costo_operativo": 1.0,
+    "peso_tiempo_espera": 0.1,
+    "peso_sobreocupacion": 1.0,
+    "peso_desviacion_frecuencia": 0.5,
+    "despachos_fallidos_min": 2.0,
+    "despachos_fallidos_pct": 25.0,
+    "deriva_psi_max": 0.25,
+    "cobertura_intervalo_min": 65.0,
+    "volumen_predicciones_min": 50.0,
+    "alertas_descartadas_max": 30.0,
 }
 
 
@@ -53,6 +63,10 @@ class ParametrosHora:
     umbral_alta_demanda: float = 1.0
     tolerancia_buses: float = 2.0
     tolerancia_pct: float = 0.15
+    peso_costo: float = 1.0
+    peso_espera: float = 0.1
+    peso_sobreocupacion: float = 1.0
+    peso_desviacion: float = 0.5
 
     def como_dict(self) -> dict:
         return asdict(self)
@@ -66,6 +80,10 @@ def _valor(valores: dict, *claves: str):
         if GENERALES.get(clave) is not None:
             return float(GENERALES[clave])
     return None
+
+
+def valor(valores: dict, clave: str) -> float | None:
+    return _valor(valores, clave)
 
 
 def parametros_hora(valores: dict, hora: int, tipo_dia: int) -> ParametrosHora:
@@ -89,4 +107,8 @@ def parametros_hora(valores: dict, hora: int, tipo_dia: int) -> ParametrosHora:
         umbral_alta_demanda=_valor(valores, "umbral_alta_demanda") / 100,
         tolerancia_buses=_valor(valores, "tolerancia_frecuencia_buses"),
         tolerancia_pct=_valor(valores, "tolerancia_frecuencia_pct") / 100,
+        peso_costo=_valor(valores, "peso_costo_operativo"),
+        peso_espera=_valor(valores, "peso_tiempo_espera"),
+        peso_sobreocupacion=_valor(valores, "peso_sobreocupacion"),
+        peso_desviacion=_valor(valores, "peso_desviacion_frecuencia"),
     )

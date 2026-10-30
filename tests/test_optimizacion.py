@@ -3,7 +3,7 @@ import math
 import pandas as pd
 import pytest
 
-from frecuencias.optimizacion import oferta
+from frecuencias.optimizacion import objetivo, oferta
 from frecuencias.optimizacion.frecuencia import buses_necesarios, recomendar
 from frecuencias.optimizacion.parametros import GENERALES, franja_de, parametros_hora
 
@@ -43,14 +43,56 @@ def test_formula_de_buses():
     assert buses_necesarios(0, 50, 0.8) == 0
 
 
-def test_recomendacion_limitada_por_demanda():
+def test_funcion_objetivo_con_pesos_de_referencia_coincide_con_la_linea_base():
     p = parametros_hora({"factor_carga": 0.4, "tiempo_ciclo": 240.0, "flota_disponible": 100.0}, 7, 0)
     rec = recomendar(1000, 1250, p)
     assert rec["carga_maxima_esperada"] == 500
-    assert rec["buses_por_hora"] == 13 and rec["limitado_por"] == "demanda"
+    assert rec["buses_por_hora"] == 13 and rec["limitado_por"] == "funcion_objetivo"
+    assert rec["linea_base"]["buses_por_hora"] == 13
     assert rec["headway_min"] == pytest.approx(60 / 13, abs=0.01)
-    assert rec["vehiculos_requeridos"] == math.ceil(240.0 / (60 / 13))
+    assert rec["vehiculos_requeridos"] == math.ceil(240.0 * 13 / 60)
     assert rec["viable"] and rec["motivo_no_viable"] is None
+    assert rec["objetivo"]["alternativas"][0]["buses"] == 13
+    assert rec["objetivo"]["costo_total"] == rec["objetivo"]["alternativas"][0]["costo_total"]
+
+
+def test_exceso_esperado_de_pasajeros():
+    assert objetivo.exceso_esperado(100, 0, 80) == 20
+    assert objetivo.exceso_esperado(100, 0, 120) == 0
+    assert objetivo.exceso_esperado(100, 10, 100) == pytest.approx(10 / math.sqrt(2 * math.pi))
+    assert objetivo.exceso_esperado(100, 10, 130) < objetivo.exceso_esperado(100, 10, 110)
+
+
+def test_pesos_de_la_funcion_objetivo_mueven_la_frecuencia():
+    base = {"factor_carga": 0.4, "tiempo_ciclo": 240.0}
+    referencia = recomendar(1000, 1250, parametros_hora(base, 7, 0))["buses_por_hora"]
+    mas_sobreocupacion = recomendar(1000, 1250, parametros_hora(base | {"peso_sobreocupacion": 5.0}, 7, 0))
+    mas_costo = recomendar(1000, 1250, parametros_hora(base | {"peso_costo_operativo": 20.0}, 7, 0))
+    assert mas_sobreocupacion["buses_por_hora"] > referencia > mas_costo["buses_por_hora"]
+    assert mas_costo["limitado_por"] == "capacidad_critica"
+    assert mas_costo["buses_por_hora"] == math.ceil(400 / (50 * 0.9))
+
+
+def test_desviacion_frente_a_la_operacion_actual_estabiliza_la_frecuencia():
+    p = parametros_hora({"factor_carga": 0.4, "tiempo_ciclo": 240.0, "peso_desviacion_frecuencia": 50.0}, 7, 0)
+    assert recomendar(1000, 1250, p, buses_actual=12)["buses_por_hora"] == 12
+    assert recomendar(1000, 1250, p, buses_actual=14)["buses_por_hora"] == 14
+
+
+def test_flota_es_restriccion_dura_cuando_alcanza_el_minimo():
+    p = parametros_hora({"factor_carga": 0.4, "tiempo_ciclo": 240.0, "flota_disponible": 44.0}, 7, 0)
+    rec = recomendar(1000, 1250, p)
+    assert rec["buses_por_hora"] == 11 and rec["limitado_por"] == "flota"
+    assert rec["vehiculos_requeridos"] <= 44 and rec["viable"]
+
+
+def test_sensibilidad_de_pesos_cubre_cada_componente():
+    rec = recomendar(1000, 1250, parametros_hora({"factor_carga": 0.4}, 7, 0))
+    assert set(rec["objetivo"]["sensibilidad_pesos"]) == {
+        f"{c}_x{f}" for c in ("costo_operativo", "tiempo_espera", "sobreocupacion", "desviacion_frecuencia")
+        for f in ("0.5", "2")}
+    assert set(rec["objetivo"]["componentes"]) == {"costo_operativo", "tiempo_espera", "sobreocupacion",
+                                                   "desviacion_frecuencia"}
 
 
 def test_servicio_minimo_con_demanda_baja():
@@ -125,3 +167,50 @@ def test_despachos_en_ventana_de_ciclo():
     assert oferta.despachos_en_ruta(viajes, 2, pd.Timestamp("2025-12-01 07:00"), 120) == 3
     assert oferta.despachos_en_ruta(viajes, 2, pd.Timestamp("2025-12-01 07:00"), 60) == 2
     assert oferta.despachos_en_ruta(viajes, 2, pd.Timestamp("2025-12-01 02:00"), 120) is None
+
+
+def test_ventana_de_servicio_combina_lo_habitual_y_el_dia():
+    dia = pd.Timestamp("2025-12-14")
+    salidas = [dia - pd.Timedelta(weeks=s) + pd.Timedelta(hours=h) for s in (1, 2, 3) for h in (5, 20)]
+    viajes = _viajes(salidas + [dia + pd.Timedelta(hours=5, minutes=10), dia + pd.Timedelta(hours=12)])
+    assert oferta.ventana_servicio(viajes, 2, dia + pd.Timedelta(hours=14)) == (dia + pd.Timedelta(hours=5),
+                                                                               dia + pd.Timedelta(hours=20))
+    tarde = _viajes([dia + pd.Timedelta(hours=5), dia + pd.Timedelta(hours=21)])
+    assert oferta.ventana_servicio(tarde, 2, dia)[1] == dia + pd.Timedelta(hours=21)
+    assert oferta.ventana_servicio(viajes, 16, dia) is None
+
+
+def _bloque(dia: pd.Timestamp, hora: int, minuto: int) -> tuple[pd.Timestamp, pd.Timestamp]:
+    inicio = dia + pd.Timedelta(hours=hora, minutes=minuto)
+    return inicio, inicio + pd.Timedelta(hours=1)
+
+
+def test_fraccion_del_bloque_dentro_del_horario_de_despachos():
+    dia = pd.Timestamp("2025-12-14")
+    ventana = (dia + pd.Timedelta(hours=5), dia + pd.Timedelta(hours=20))
+    assert oferta.fraccion_en_servicio(ventana, *_bloque(dia, 7, 15)) == 1.0
+    assert oferta.fraccion_en_servicio(ventana, *_bloque(dia, 19, 15)) == pytest.approx(46 / 60)
+    assert oferta.fraccion_en_servicio(ventana, *_bloque(dia, 20, 15)) == 0.0
+    assert oferta.fraccion_en_servicio(ventana, *_bloque(dia, 4, 15)) == pytest.approx(15 / 60)
+    assert oferta.fraccion_en_servicio(None, *_bloque(dia, 23, 0)) == 1.0
+
+
+def _predicciones_desde(inicio: str, franjas: int) -> list[dict]:
+    base = pd.Timestamp(inicio)
+    return [{"franja_objetivo": base + pd.Timedelta(minutes=15 * k), "servicio_habitual": True,
+             "variables": {"tipo_dia": 2}, "pasajeros_predichos": 60.0, "limite_inferior": 50.0,
+             "limite_superior": 80.0, "minutos_antelacion": 15 * (k + 1), "prediction_id": None,
+             "explicacion": {"variables": []}} for k in range(franjas)]
+
+
+def test_no_se_recomienda_despues_del_ultimo_despacho_y_la_hora_parcial_se_prorratea():
+    from frecuencias.operacion.recomendacion import recomendar_bloques
+    dia = pd.Timestamp("2025-12-14")
+    salidas = [dia - pd.Timedelta(weeks=s) + pd.Timedelta(hours=h) for s in (1, 2) for h in (5, 20)]
+    salidas += [dia + pd.Timedelta(hours=19, minutes=m) for m in (30, 45, 60)]
+    recs = recomendar_bloques(_predicciones_desde("2025-12-14 19:15", 8), 2, {}, _viajes(salidas))
+    assert len(recs) == 1
+    assert recs[0]["franja_inicio"] == dia + pd.Timedelta(hours=19, minutes=15)
+    assert recs[0]["fraccion_servicio"] == pytest.approx(46 / 60, abs=1e-3)
+    assert recs[0]["buses_por_hora_actual"] == pytest.approx(3 / (46 / 60), abs=0.01)
+    assert recs[0]["ventana_servicio"] == [str(dia + pd.Timedelta(hours=5)), str(dia + pd.Timedelta(hours=20))]

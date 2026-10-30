@@ -1,0 +1,70 @@
+{
+ "errores_consola": [],
+ "pasos": {
+  "sin_clave_pide_clave": true,
+  "hoy": {
+   "rutas": 3,
+   "horas": 48,
+   "acciones": 6,
+   "resumen": "Situación del domingo, 14 de diciembre de 2025 a las 06:00 · último dato recibido: 2025-12-14 23:30"
+  },
+  "mapa_ruta": {
+   "ruta": "16",
+   "tipo_dia": "dom_fest",
+   "hora": "6",
+   "tramos": 124,
+   "teselas": 18,
+   "filas_tabla": 12
+  },
+  "mapa_todas": {
+   "tramos": 389,
+   "leyenda": 4
+  },
+  "hoy_a_alertas_de_la_ruta": "2",
+  "prediccion": {
+   "puntos_grafico": 8,
+   "filas_tabla": 8,
+   "tarjetas_recomendacion": 2,
+   "tramo_critico": 2,
+   "funcion_objetivo": 2
+  },
+  "teclado_pestanas": true,
+  "alertas_agrupadas": {
+   "grupos_en_pagina": 25,
+   "seleccion": "3 alertas seleccionadas en 1 grupo"
+  },
+  "alertas": {
+   "filas": 3,
+   "historial": 1
+  },
+  "ejecuciones": 30,
+  "modelos": 10,
+  "parametros": 115,
+  "modelos_en_uso": 3,
+  "monitoreo": 12,
+  "botones_reintento": 0,
+  "exportacion": {
+   "archivo": "alerts-20261030T001822Z.csv",
+   "bytes": 814192
+  }
+ },
+ "contraste_claro": {
+  "body": 15.45,
+  ".sub": 5.69,
+  "th": 6.1,
+  "button.primario": 6.09,
+  ".pestanas button[aria-selected='true']": 16.56,
+  ".kpi span": 6.1
+ },
+ "contraste_oscuro": {
+  "body": 15.03,
+  ".sub": 7.25,
+  "th": 6.49,
+  "button.primario": 6.59,
+  ".pestanas button[aria-selected='true']": 13.45
+ },
+ "movil_sin_desborde": true,
+ "completado": true,
+ "contraste_minimo": 5.69,
+ "aprobado": true
+}

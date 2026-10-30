@@ -1,0 +1,206 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-tabla]{babel}
+\usepackage{lmodern}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage[colorlinks=true,linkcolor=blue!50!black,urlcolor=blue!50!black]{hyperref}
+
+\setlength{\parskip}{0.4em}
+\setlength{\parindent}{0pt}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcommand{\cod}[1]{\texttt{\small #1}}
+
+\title{\textbf{E12 · Plan de evolución}\\[0.3em]
+\large Frecuencias inteligentes SOBUSA: integración, escalabilidad, costos y riesgos}
+\author{Roger Daza \quad Matteo Del Sole \quad Rafael Romero\\[0.2em]\small Universidad del Norte · Reto Extreme Technologies -- SOBUSA}
+\date{29 de octubre de 2026}
+
+\begin{document}
+\maketitle
+
+\section{Punto de partida}
+
+El prototipo funciona de punta a punta con tres rutas (SILENCIO, CRA 54 y CL 72) y datos hasta diciembre de 2025:
+
+\begin{itemize}
+  \setlength{\itemsep}{0.1em}
+  \item Lee la base del operador en solo lectura.
+  \item Pronostica la demanda a 30, 60 y 120 minutos, con un error de 10--11\,\% frente a 14,9\,\% de la referencia.
+  \item Recomienda la frecuencia con una función objetivo.
+  \item Genera y agrupa alertas.
+  \item Monitorea su propio desempeño y reentrena de forma controlada.
+\end{itemize}
+
+Corre en Docker Compose con 299 pruebas automáticas y un análisis de SonarQube sin hallazgos. Lo que falta para operar no es software sino tres cosas:
+
+\begin{itemize}
+  \setlength{\itemsep}{0.1em}
+  \item validar los parámetros operativos con SOBUSA;
+  \item probar la herramienta con los despachadores;
+  \item llevarla a la infraestructura del operador.
+\end{itemize}
+
+Este plan ordena esos pasos.
+
+\section{Hoja de ruta}
+
+\begin{table}[h]
+\centering\small
+\begin{tabularx}{\textwidth}{@{}p{2.6cm}p{1.6cm}YY@{}}
+\toprule
+\textbf{Fase} & \textbf{Duración} & \textbf{Qué se hace} & \textbf{Criterio para pasar a la siguiente} \\
+\midrule
+0. Validación & 2 semanas &
+Capacidad real por tipología de bus, headway máximo por ruta y franja, flota disponible por ruta, pesos de la función objetivo y umbrales de alerta. Credenciales de correo y WhatsApp. Despliegue en el ambiente de pruebas de Extreme Technologies contra una réplica de lectura. &
+Parámetros marcados como validados en \cod{operational\_parameter}. Ciclo horario 7 días seguidos sin intervención manual. \\
+\addlinespace
+1. Piloto consultivo & 4 semanas &
+CL 72 y SILENCIO, las rutas con mayor diferencia entre lo operado y lo recomendado. Los despachadores usan la pantalla \emph{Hoy} y gestionan alertas agrupadas. La decisión sigue siendo humana; se registra si se siguió la recomendación. &
+Indicadores de la Sección~\ref{sec:indicadores} iguales o mejores que las mismas semanas del año anterior. Alertas descartadas bajo 30\,\%. \\
+\addlinespace
+2. Producción & 6--8 semanas &
+Las tres rutas. Ingreso con las cuentas del operador (SSO), respaldo diario, monitoreo con las herramientas del operador, notificaciones reales por turno, servidor de base separado de la aplicación. &
+Disponibilidad del ciclo $\geq$ 99\,\% en un mes; cero incidentes sobre la base operacional. \\
+\addlinespace
+3. Extensión & continua &
+Más rutas por grupos. Mejoras del modelo: sentido de la ruta, demanda por segmento, flota compartida entre rutas y planificación del día siguiente. &
+Cada ruta nueva supera la línea base en su validación temporal antes de activarse. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Integración}
+
+\begin{itemize}
+  \setlength{\itemsep}{0.15em}
+  \item \textbf{Fuente de datos.} Pasar de la base operacional a una réplica de lectura. El código ya usa transacciones de solo lectura, timeout y consultas por rango con índices existentes (E07).
+    \begin{itemize}
+      \item Si el operador completa los consolidados \cod{timbradas\_*}, basta con cambiar las consultas de \cod{ingesta/consultas.py}.
+      \item Para relecturas de periodos corregidos, la recarga del histórico es idempotente. Falta exponer la recarga por rango.
+      \item Índice sugerido para el DBA: (\cod{idprogramacion}, \cod{fecha}) en \cod{conteo\_pasajeros\_destino}, previa revisión con \cod{EXPLAIN}.
+    \end{itemize}
+  \item \textbf{Identidad.} Hoy el acceso es con claves por rol (lector, operador, administrador). En producción conviene conectar el ingreso al directorio del operador (OpenID Connect) para que la bitácora de alertas, activaciones y parámetros registre personas, no claves.
+  \item \textbf{Notificaciones.} Los adaptadores de correo (SMTP con TLS) y WhatsApp Cloud API están implementados. Falta la cuenta institucional, una plantilla aprobada por Meta y la lista de destinatarios por ruta y turno.
+  \item \textbf{Sistema de despacho.} La API \cod{/api/v1} ya permite que otro sistema consulte recomendaciones y alertas. Una evolución natural es notificar cambios por \emph{webhook} en lugar de consultar.
+  \item \textbf{Observabilidad.} El prototipo expone métricas Prometheus y trazas OpenTelemetry; se conectan a la plataforma que use el operador. Alarmas recomendadas:
+    \begin{itemize}
+      \item ciclo fallido o interrumpido;
+      \item latencia de datos mayor a 2 periodos;
+      \item deriva o degradación del modelo.
+    \end{itemize}
+\end{itemize}
+
+\section{Escalabilidad}
+
+\begin{table}[h]
+\centering\small
+\begin{tabularx}{\textwidth}{@{}lYY@{}}
+\toprule
+\textbf{Componente} & \textbf{Hoy (3 rutas)} & \textbf{Con 50 rutas} \\
+\midrule
+Histórico de demanda & 240.000 franjas en 3 años (unas 27.000 por ruta y año) & Unas 1,3 millones por año: sin cambios para PostgreSQL \\
+Observaciones por segmento & 1,18 millones de filas & Crece con viajes $\times$ segmentos: particionar por mes (§8.1) al superar unos 10 millones \\
+Ingesta & 808.345 registros en 149 s, pico de 964 MB & Procesar por ruta y fecha (RNF-005), en paralelo \\
+Entrenamiento completo & 37 min (3 horizontes, 15 intentos de Optuna) en un equipo de desarrollo & Horas: reentrenar sin búsqueda de hiperparámetros (ya lo hace el campeón/retador), más núcleos o modelos por grupo de rutas \\
+Ciclo incremental & Un proceso, un ciclo a la vez & Un trabajo por ruta con exclusión por ruta en lugar de global \\
+API & Un proceso; consultas paginadas con p95 de 146 ms & Varias réplicas tras un balanceador, con la reanudación de ciclos solo en el programador (\cod{CICLO\_REANUDAR=desactivada}) \\
+Predicción interactiva & 4,5 s por cálculo & La pantalla \emph{Hoy} lee resultados ya calculados por el ciclo; el cálculo interactivo queda para consultas puntuales \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Costos}
+
+\textbf{Licencias: cero.} Todo el sistema usa software libre: PostgreSQL, PostGIS, Python, FastAPI, LightGBM, SonarQube Community, Prometheus y Jaeger. El único costo variable externo es la mensajería de WhatsApp Business, que Meta cobra por conversación; se cotiza según el volumen de alertas críticas. Con los umbrales actuales son unas 13 alertas críticas al día entre las tres rutas, y se reducen al validar la capacidad.
+
+\textbf{Infraestructura.}
+
+\begin{itemize}
+  \setlength{\itemsep}{0.1em}
+  \item \textbf{Piloto.} Un servidor de 4 vCPU, 16 GB de RAM y 100 GB de disco con Docker basta. El pico de memoria medido es de 964 MB en la ingesta y la imagen pesa 1,9 GB.
+  \item \textbf{Producción.} Dos servidores (aplicación y base de datos), respaldo diario de la base y de \cod{modelos/}, y el monitoreo del operador.
+\end{itemize}
+
+El valor en pesos depende de si se usa infraestructura propia del operador o un proveedor de nube. Se debe cotizar con estas cifras.
+
+\textbf{Esfuerzo estimado.}
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Fase} & \textbf{Equipo} & \textbf{Esfuerzo} \\
+\midrule
+0. Validación & 1 analista + contraparte operativa de SOBUSA & unas 3 personas-semana \\
+1. Piloto & 1 ingeniero + acompañamiento a despachadores & unas 5 personas-semana \\
+2. Producción & 2 ingenieros & unas 14 personas-semana \\
+3. Extensión & 1 ingeniero a medio tiempo & continuo \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Beneficio por verificar en el piloto.} Al recalcular con la función objetivo las 748 horas-ruta del 1 al 14 de diciembre de 2025, la recomendación usa 608 vehículo-horas menos que lo operado en esas dos semanas, unas 43 por día entre las tres rutas.
+
+\begin{itemize}
+  \setlength{\itemsep}{0.1em}
+  \item El saldo es neto: CL 72 necesitaría más buses y SILENCIO menos.
+  \item Depende de parámetros todavía sin validar: capacidad, headway máximo y pesos.
+\end{itemize}
+
+El ahorro en pesos es esa cifra por el costo de una vehículo-hora, dato que debe aportar SOBUSA. El piloto existe para confirmarla o corregirla.
+
+\section{Riesgos y mitigaciones}
+
+\begin{longtable}{@{}p{0.27\textwidth}p{0.66\textwidth}@{}}
+\toprule
+\textbf{Riesgo} & \textbf{Mitigación} \\
+\midrule
+\endhead
+Parámetros operativos sin validar & Fase 0. Son parámetros versionados en la base: se corrigen sin desarrollo y queda la versión anterior. \\
+Baja adopción por los despachadores & Piloto consultivo; recomendaciones en lenguaje operativo con su razón; pantalla \emph{Hoy}; registro de si se siguió la recomendación. \\
+Alertas excesivas & Agrupación por ruta, código y día con gestión en lote; medición del porcentaje de descartadas por regla; recalibración con la capacidad validada. \\
+Mala calidad de los datos de sensores & Reglas de calidad CAL-xxx por lote, días sin lecturas tratados como faltantes, ALT-008 y ALT-009. \\
+Deriva o degradación del modelo & Monitoreo de deriva, error y cobertura en cada ciclo; reentrenamiento campeón/retador; reversión a la versión anterior en un clic. \\
+Carga sobre la base operacional & Réplica de lectura, consultas por rango indexadas, transacciones de solo lectura con timeout, índices solo con aprobación del DBA. \\
+Recomendación inviable & Restricciones duras de flota, headway y capacidad; la recomendación se marca \emph{no viable} con el motivo. \\
+Caídas y reinicios & Trabajos con latido, reanudación automática y reintentos, verificados con una caída real de la API. \\
+Exposición de datos & Mínimo privilegio en las dos bases, sin datos personales de conductores, claves con huella, secretos fuera del repositorio. \\
+Dependencia del equipo actual & Manuales técnico, de usuario y de despliegue; 299 pruebas; integración continua con SonarQube; explicación de cada archivo en \cod{comentarios\_codigo.pdf}. \\
+Compatibilidad de librerías & Versiones fijadas en \cod{requirements.txt}; la instrumentación de trazas sobre SQLAlchemy 2.1 está cubierta por pruebas. \\
+\bottomrule
+\end{longtable}
+
+\section{Indicadores del piloto}\label{sec:indicadores}
+
+Todos se calculan con datos que el sistema ya guarda:
+
+\begin{itemize}
+  \setlength{\itemsep}{0.1em}
+  \item espera media estimada (la mitad del headway operado) y ocupación p90 en el tramo más cargado;
+  \item vehículo-horas operadas por día y ruta;
+  \item porcentaje de horas con despachos fallidos (ALT-006);
+  \item error del pronóstico (WAPE) y cobertura del intervalo;
+  \item porcentaje de alertas descartadas;
+  \item porcentaje de horas en que se siguió la recomendación.
+\end{itemize}
+
+\section{Decisiones que requiere SOBUSA}
+
+\begin{enumerate}
+  \setlength{\itemsep}{0.1em}
+  \item Capacidad por tipología de bus, headway máximo por ruta y franja, y flota disponible por ruta.
+  \item Valor relativo entre costo de operación, espera de los pasajeros y sobreocupación (pesos de la función objetivo), y costo de una vehículo-hora.
+  \item Rutas y semanas del piloto, y responsables de operación que lo acompañan.
+  \item Infraestructura (propia o en la nube), réplica de lectura y directorio para el ingreso.
+  \item Cuentas de correo y WhatsApp para las notificaciones, y destinatarios por turno.
+\end{enumerate}
+
+\end{document}

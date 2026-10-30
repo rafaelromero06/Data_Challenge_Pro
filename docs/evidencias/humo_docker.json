@@ -1,0 +1,164 @@
+{
+ "salud": {
+  "estado": "ok",
+  "horizontes_min": [
+   30,
+   60,
+   120
+  ],
+  "ultima_franja_con_datos": "2025-12-14T23:30:00",
+  "fuente_datos": "ai_frecuencias.demand_history",
+  "revision_base": "0009"
+ },
+ "sin_clave": 401,
+ "docs": 200,
+ "lanzamiento": {
+  "estado_http": 202,
+  "executionId": 188,
+  "correlationId": "8a8053c4-6ad0-46d9-bd6b-8f76c8053d05",
+  "status": "en_curso",
+  "attempt": 1,
+  "location": "/api/v1/frequency/executions/188"
+ },
+ "segundo_lanzamiento_mientras_corre": 409,
+ "ejecucion": {
+  "estado": "exitosa",
+  "segundos": 10,
+  "error": null,
+  "ingesta": {
+   "desde": "2025-12-14 23:45:00",
+   "hasta": "2025-12-15 00:00:00",
+   "rechazados": 0,
+   "execution_id": 189,
+   "franjas_leidas": 0,
+   "franjas_guardadas": 0,
+   "franjas_invalidas": 0,
+   "problemas_calidad": 0
+  },
+  "segmentos": {
+   "estado": "omitido",
+   "motivo": "sin datos nuevos"
+  },
+  "operacion": {
+   "predicciones": 0,
+   "alertas_nuevas": 0,
+   "recomendaciones": 0,
+   "alertas_actualizadas": 0
+  },
+  "monitoreo": {
+   "deriva_psi:ruta:2": {
+    "valor": 0.1816,
+    "estado": "ok"
+   },
+   "deriva_psi:ruta:16": {
+    "valor": 0.205,
+    "estado": "ok"
+   },
+   "deriva_psi:ruta:21": {
+    "valor": 0.0768,
+    "estado": "ok"
+   },
+   "error_movil_wape:h30": {
+    "valor": 0.1133,
+    "estado": "ok"
+   },
+   "error_movil_wape:h60": {
+    "valor": 0.1324,
+    "estado": "ok"
+   },
+   "error_movil_wape:h120": {
+    "valor": 0.1301,
+    "estado": "ok"
+   },
+   "cobertura_intervalo:h30": {
+    "valor": 0.8095,
+    "estado": "ok"
+   },
+   "cobertura_intervalo:h60": {
+    "valor": 0.7603,
+    "estado": "ok"
+   },
+   "cobertura_intervalo:h120": {
+    "valor": 0.773,
+    "estado": "ok"
+   },
+   "alertas_descartadas:global": {
+    "valor": 1.0,
+    "estado": "sin_datos"
+   },
+   "alertas_descartadas:ALT-010": {
+    "valor": 1.0,
+    "estado": "sin_datos"
+   },
+   "volumen_predicciones:global": {
+    "valor": 394.0,
+    "estado": "ok"
+   }
+  },
+  "solicitado_por": "humo-3d60c074"
+ },
+ "salud_despues": "2025-12-14T23:30:00",
+ "resumen_alertas": {
+  "total": 777,
+  "por_estado": {
+   "abierta": 775,
+   "descartada": 2
+  },
+  "por_severidad": {
+   "critica": 183,
+   "informativa": 38,
+   "preventiva": 556
+  },
+  "por_codigo": {
+   "ALT-001": {
+    "total": 243,
+    "descartadas": 0,
+    "cerradas": 0,
+    "pct_descartadas": null
+   },
+   "ALT-002": {
+    "total": 158,
+    "descartadas": 0,
+    "cerradas": 0,
+    "pct_descartadas": null
+   },
+   "ALT-003": {
+    "total": 315,
+    "descartadas": 0,
+    "cerradas": 0,
+    "pct_descartadas": null
+   },
+   "ALT-004": {
+    "total": 38,
+    "descartadas": 0,
+    "cerradas": 0,
+    "pct_descartadas": null
+   },
+   "ALT-005": {
+    "total": 14,
+    "descartadas": 0,
+    "cerradas": 0,
+    "pct_descartadas": null
+   },
+   "ALT-007": {
+    "total": 6,
+    "descartadas": 0,
+    "cerradas": 0,
+    "pct_descartadas": null
+   },
+   "ALT-009": {
+    "total": 1,
+    "descartadas": 0,
+    "cerradas": 0,
+    "pct_descartadas": null
+   },
+   "ALT-010": {
+    "total": 2,
+    "descartadas": 2,
+    "cerradas": 0,
+    "pct_descartadas": 1.0
+   }
+  },
+  "pct_descartadas": 1.0
+ }
+}

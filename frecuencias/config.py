@@ -21,4 +21,5 @@ ID_CARNAVAL_CENTRAL = 8
 ID_SEMANA_SANTA = 10
 
 ESQUEMA_IA = "ai_frecuencias"
+NOMBRES_RUTAS = {2: "SILENCIO", 16: "CRA 54", 21: "CL 72"}
 ZONA_HORARIA = "America/Bogota"

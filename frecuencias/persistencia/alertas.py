@@ -1,14 +1,18 @@
 from datetime import datetime
 
-from sqlalchemy import func, insert, select, text, update
+from sqlalchemy import Date, Integer, case, cast, func, insert, select, text, update
+from sqlalchemy.dialects.postgresql import aggregate_order_by
 from sqlalchemy.dialects.postgresql import insert as insert_pg
 from sqlalchemy.engine import Connection
 
-from frecuencias.persistencia.consultas import paginar
+from frecuencias.config import ZONA_HORARIA
+from frecuencias.persistencia.consultas import TAMANO_MAXIMO, paginar
 from frecuencias.persistencia.tablas import alerta, historial_alerta
 from frecuencias.tiempo import ahora_utc
 
 ESTADOS_ABIERTOS = ("abierta", "reconocida", "asignada")
+ORDEN_SEVERIDAD = {"critica": 0, "preventiva": 1, "informativa": 2}
+MAXIMO_LOTE = 500
 TRANSICIONES = {
     "abierta": {"reconocida", "asignada", "cerrada", "descartada"},
     "reconocida": {"asignada", "cerrada", "descartada"},
@@ -103,12 +107,15 @@ def resumen(conn: Connection, desde: datetime | None = None, hasta: datetime | N
             "pct_descartadas": round(por_estado.get("descartada", 0) / gestionadas, 4) if gestionadas else None}
 
 
-def consultar(conn: Connection, estado: str | None = None, severidad: str | None = None, codigo: str | None = None,
-              id_ruta: int | None = None, desde: datetime | None = None, hasta: datetime | None = None,
-              pagina: int = 1, tamano: int = 50, orden: str = "detectada_en",
-              descendente: bool = True) -> tuple[list[dict], int]:
-    consulta = select(alerta)
-    if estado:
+def _momento_alerta():
+    return func.coalesce(alerta.c.ventana_inicio, alerta.c.detectada_en)
+
+
+def _filtrar(consulta, estado: str | None = None, severidad: str | None = None, codigo: str | None = None,
+             id_ruta: int | None = None, ventana_desde: datetime | None = None, ventana_hasta: datetime | None = None):
+    if estado == "pendiente":
+        consulta = consulta.where(alerta.c.estado.in_(ESTADOS_ABIERTOS))
+    elif estado:
         consulta = consulta.where(alerta.c.estado == estado)
     if severidad:
         consulta = consulta.where(alerta.c.severidad == severidad)
@@ -116,8 +123,82 @@ def consultar(conn: Connection, estado: str | None = None, severidad: str | None
         consulta = consulta.where(alerta.c.codigo == codigo)
     if id_ruta is not None:
         consulta = consulta.where(alerta.c.id_ruta == id_ruta)
+    if ventana_desde is not None:
+        consulta = consulta.where(_momento_alerta() >= ventana_desde)
+    if ventana_hasta is not None:
+        consulta = consulta.where(_momento_alerta() < ventana_hasta)
+    return consulta
+
+
+def consultar(conn: Connection, estado: str | None = None, severidad: str | None = None, codigo: str | None = None,
+              id_ruta: int | None = None, desde: datetime | None = None, hasta: datetime | None = None,
+              pagina: int = 1, tamano: int = 50, orden: str = "detectada_en", descendente: bool = True,
+              ventana_desde: datetime | None = None, ventana_hasta: datetime | None = None) -> tuple[list[dict], int]:
+    consulta = _filtrar(select(alerta), estado, severidad, codigo, id_ruta, ventana_desde, ventana_hasta)
     if desde is not None:
         consulta = consulta.where(alerta.c.detectada_en >= desde)
     if hasta is not None:
         consulta = consulta.where(alerta.c.detectada_en < hasta)
     return paginar(conn, consulta, alerta, orden, descendente, pagina, tamano)
+
+
+def agrupar(conn: Connection, estado: str | None = None, severidad: str | None = None, codigo: str | None = None,
+            id_ruta: int | None = None, ventana_desde: datetime | None = None, ventana_hasta: datetime | None = None,
+            pagina: int = 1, tamano: int = 50) -> tuple[list[dict], int]:
+    local = func.timezone(ZONA_HORARIA, _momento_alerta())
+    dia = cast(local, Date).label("dia")
+    rango = func.min(case(ORDEN_SEVERIDAD, value=alerta.c.severidad, else_=9))
+    base = _filtrar(
+        select(alerta.c.id_ruta, alerta.c.codigo, alerta.c.severidad, dia, func.count().label("alertas"),
+               func.array_agg(aggregate_order_by(alerta.c.id, _momento_alerta())).label("ids"),
+               func.array_agg(aggregate_order_by(cast(func.extract("hour", local), Integer), _momento_alerta()))
+               .label("horas"),
+               func.array_agg(aggregate_order_by(alerta.c.explicacion, _momento_alerta().desc())).label("explicaciones")),
+        estado, severidad, codigo, id_ruta, ventana_desde, ventana_hasta,
+    ).group_by(alerta.c.id_ruta, alerta.c.codigo, alerta.c.severidad, dia)
+    total = conn.execute(select(func.count()).select_from(base.subquery())).scalar_one()
+    tamano = max(1, min(tamano, TAMANO_MAXIMO))
+    filas = conn.execute(
+        base.order_by(rango, dia.desc(), func.count().desc(), alerta.c.id_ruta, alerta.c.codigo)
+        .limit(tamano).offset((max(pagina, 1) - 1) * tamano)
+    ).mappings().all()
+    grupos = [{"id_ruta": f["id_ruta"], "codigo": f["codigo"], "severidad": f["severidad"], "dia": f["dia"],
+               "alertas": f["alertas"], "ids": [str(i) for i in f["ids"]], "horas": sorted(set(f["horas"])),
+               "ejemplo": f["explicaciones"][0]} for f in filas]
+    return grupos, total
+
+
+def abiertas_por_ruta(conn: Connection) -> dict:
+    filas = conn.execute(
+        select(alerta.c.id_ruta, alerta.c.severidad, func.count().label("alertas"))
+        .where(alerta.c.estado.in_(ESTADOS_ABIERTOS)).group_by(alerta.c.id_ruta, alerta.c.severidad)
+    ).mappings().all()
+    resultado = {}
+    for f in filas:
+        actual = resultado.setdefault(f["id_ruta"], {"abiertas": 0, "criticas": 0})
+        actual["abiertas"] += f["alertas"]
+        if f["severidad"] == "critica":
+            actual["criticas"] += f["alertas"]
+    return resultado
+
+
+def pendientes_en(conn: Connection, desde: datetime, hasta: datetime) -> list[dict]:
+    consulta = _filtrar(select(alerta.c.id, alerta.c.id_ruta, alerta.c.codigo, alerta.c.severidad,
+                               alerta.c.explicacion, alerta.c.ventana_inicio, alerta.c.ventana_fin),
+                        "pendiente", ventana_desde=desde, ventana_hasta=hasta)
+    rango = case(ORDEN_SEVERIDAD, value=alerta.c.severidad, else_=9)
+    return [dict(f) for f in conn.execute(consulta.order_by(rango, _momento_alerta().desc())).mappings()]
+
+
+def cambiar_estados(conn: Connection, ids: list, estado_nuevo: str | None, usuario: str,
+                    comentario: str | None = None, usuario_asignado: str | None = None) -> dict:
+    if len(ids) > MAXIMO_LOTE:
+        raise ValueError(f"Se pueden actualizar hasta {MAXIMO_LOTE} alertas por vez.")
+    actualizadas, errores = [], []
+    for id_alerta in dict.fromkeys(ids):
+        try:
+            cambiar_estado(conn, id_alerta, estado_nuevo, usuario, comentario, usuario_asignado)
+            actualizadas.append(str(id_alerta))
+        except (LookupError, ValueError) as error:
+            errores.append({"id": str(id_alerta), "mensaje": str(error)})
+    return {"actualizadas": len(actualizadas), "ids": actualizadas, "errores": errores}

@@ -78,13 +78,38 @@ def test_demanda_observada_fuera_del_intervalo():
     assert reglas.por_observacion(_obs(50, predicho=0), 0.15) == []
 
 
-def test_hueco_de_despachos_genera_alt_006():
-    salidas = pd.Series(pd.to_datetime(["2025-12-01 07:00", "2025-12-01 07:05", "2025-12-01 07:30",
-                                        "2025-12-01 07:38"]))
-    alertas = reglas.por_despachos(salidas, 2, 10, INICIO, FIN)
+def _programados(hora: str, estados: list[str]) -> list[dict]:
+    filas = []
+    for k, estado in enumerate(estados):
+        salida = pd.Timestamp(hora) + pd.Timedelta(minutes=10 * k)
+        filas.append({"id_ruta": 2, "fechasalida": salida, "idvehiculo": f"BUS{k}",
+                      "cancelada": estado == "cancelado",
+                      "fechainicio": None if estado in ("cancelado", "sin_iniciar") else salida,
+                      "excede_plazo_salida": estado == "tarde"})
+    return filas
+
+
+def test_despachos_fallidos_en_la_hora_generan_alt_006():
+    viajes = pd.DataFrame(_programados("2025-12-01 07:00", ["ok", "cancelado", "ok", "tarde", "ok", "ok"])
+                          + _programados("2025-12-01 08:00", ["ok", "cancelado", "ok", "ok", "ok", "ok"]))
+    alertas = reglas.por_despachos(viajes, 2, INICIO, INICIO + pd.Timedelta(hours=2), 2, 0.25)
     assert len(alertas) == 1
-    assert alertas[0]["ventana_inicio"] == pd.Timestamp("2025-12-01 07:05")
-    assert alertas[0]["valor_observado"] == 25.0 and alertas[0]["umbral"] == 20.0
+    alerta = alertas[0]
+    assert alerta["codigo"] == "ALT-006"
+    assert alerta["severidad"] == "critica"
+    assert alerta["ventana_inicio"] == INICIO
+    assert alerta["valor_observado"] == pytest.approx(33.3)
+    assert alerta["umbral"] == 25.0
+    assert "1 cancelado" in alerta["explicacion"]
+    assert "1 fuera de plazo" in alerta["explicacion"]
+    assert {"variable": "despachos_programados", "valor": 6} in alerta["variables_influyentes"]
+
+
+def test_despachos_sin_iniciar_cuentan_y_otra_ruta_no():
+    viajes = pd.DataFrame(_programados("2025-12-01 07:00", ["sin_iniciar", "sin_iniciar", "ok"]))
+    assert reglas.por_despachos(viajes, 2, INICIO, FIN, 2, 0.25)[0]["valor_observado"] == pytest.approx(66.7)
+    assert reglas.por_despachos(viajes, 16, INICIO, FIN, 2, 0.25) == []
+    assert reglas.por_despachos(viajes, 2, INICIO, FIN, 3, 0.25) == []
 
 
 def test_problemas_de_calidad_se_agrupan_por_ruta_y_dia():

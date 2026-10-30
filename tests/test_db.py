@@ -14,7 +14,7 @@ def test_motor_fuente_exige_contrasena():
 
 def test_motor_fuente_es_de_solo_lectura():
     entorno = {"PGPASSWORD": "x", "SOBUSA_DB_USER": "u", "SOBUSA_DB_HOST": "h", "SOBUSA_DB_PORT": "5432"}
-    with mock.patch.dict("os.environ", entorno), mock.patch.object(db, "create_engine") as crear:
+    with mock.patch.dict("os.environ", entorno), mock.patch.object(db.sqlalchemy, "create_engine") as crear:
         db.motor_fuente()
     opciones = crear.call_args.kwargs["connect_args"]["options"]
     assert "default_transaction_read_only=on" in opciones and "statement_timeout" in opciones

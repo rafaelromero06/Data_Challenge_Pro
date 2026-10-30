@@ -4,7 +4,7 @@ import os
 import threading
 import uuid
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
 from typing import Literal
@@ -20,21 +20,23 @@ from fastapi.staticfiles import StaticFiles
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from sqlalchemy.exc import SQLAlchemyError
 
-from frecuencias import db, seguridad
+from frecuencias import db, seguridad, trazas
 from frecuencias.analitica.carga import cargar_calendario, cargar_datos
 from frecuencias.analitica.serie import preparar_serie
 from frecuencias.api import esquemas as esq
 from frecuencias.api.errores import registrar_manejadores
-from frecuencias.config import CARPETA_DATOS, FEATURE_VERSION, PASO_MIN, ZONA_HORARIA
+from frecuencias.config import CARPETA_DATOS, FEATURE_VERSION, NOMBRES_RUTAS, PASO_MIN, ZONA_HORARIA
 from frecuencias.inferencia import artefactos
 from frecuencias.inferencia.modelos import cargar_modelos, desde_registro
 from frecuencias.inferencia.prediccion import Predictor
 from frecuencias.ingesta import historico
 from frecuencias.observabilidad import MiddlewareCorrelacion, configurar_logs, describir_error, log
-from frecuencias.operacion import ciclo, pronostico, recomendacion, servicio
-from frecuencias.persistencia import (alertas, calidad, ejecuciones, parametros, predicciones, recomendaciones,
-                                      registro_modelos)
+from frecuencias.operacion import ciclo, pronostico, recomendacion, resumen, servicio, trabajos
+from frecuencias.persistencia import (alertas, calidad, ejecuciones, monitoreo, parametros, predicciones,
+                                      recomendaciones, registro_modelos)
 from frecuencias.persistencia.consultas import TAMANO_MAXIMO
+from frecuencias.optimizacion import oferta
+from frecuencias.segmentos import carga as segmentos_carga
 from frecuencias.segmentos import consultas as segmentos_consultas
 from frecuencias.tiempo import a_zona, ahora_utc
 
@@ -48,6 +50,7 @@ TIPOS_EXPORTACION = {
 }
 ENTORNO = os.environ.get("ENTORNO", "desarrollo").lower()
 DOCUMENTACION = ENTORNO != "produccion" or os.environ.get("API_DOCS", "").lower() == "activa"
+REANUDAR_CICLOS = os.environ.get("CICLO_REANUDAR", "activa").lower() != "desactivada"
 
 estado: dict = {}
 CANDADO = threading.Lock()
@@ -79,7 +82,7 @@ def _cargar_estado(motor) -> None:
     serie = preparar_serie(demanda)
     calendario = cargar_calendario()
     predictor = Predictor(cargar_modelos(motor), calendario)
-    nombres = {}
+    nombres = dict(NOMBRES_RUTAS)
     if (CARPETA_DATOS / "rutas.parquet").exists():
         rutas = pd.read_parquet(CARPETA_DATOS / "rutas.parquet")
         nombres = dict(zip(rutas["id_ruta"].astype(int), rutas["nombre"]))
@@ -91,12 +94,30 @@ def _cargar_estado(motor) -> None:
                     horizontes=predictor.horizontes)
 
 
+def _reanudar(motor, recuperadas: list[dict]) -> None:
+    for r in ciclo.reanudables(recuperadas) if REANUDAR_CICLOS else []:
+        if not CICLO.acquire(blocking=False):
+            return
+        try:
+            e, argumentos = ciclo.preparar_reintento(motor, r["id"], "api")
+        except Exception as error:
+            CICLO.release()
+            log("api").warning("ciclo_no_reanudado", execution_id=r["id"], error=describir_error(error))
+            continue
+        threading.Thread(target=_ciclo_en_segundo_plano, args=(motor, argumentos, e), daemon=True,
+                         name=f"ciclo-{e['id']}").start()
+        log("api").warning("ciclo_reanudado", execution_id=r["id"], nuevo=e["id"], intento=e["intento"])
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     configurar_logs()
     estado["motor_ia"] = db.motor_destino() if db.url_destino() else None
     _cargar_estado(estado["motor_ia"])
+    if estado["motor_ia"] is not None:
+        _reanudar(estado["motor_ia"], trabajos.iniciar_proceso(estado["motor_ia"], "api"))
     yield
+    trabajos.detener_proceso()
     if estado["motor_ia"] is not None:
         estado["motor_ia"].dispose()
     estado.clear()
@@ -114,6 +135,8 @@ app = FastAPI(
 )
 app.add_middleware(MiddlewareCorrelacion)
 registrar_manejadores(app)
+trazas.configurar("api")
+trazas.instrumentar_app(app)
 router = APIRouter(prefix=PREFIJO)
 
 
@@ -302,9 +325,9 @@ def _correr(peticion: esq.PeticionPrediccion, request: Request, quien: dict) -> 
     }
 
 
-def _ciclo_en_segundo_plano(motor, peticion: esq.PeticionEjecucion, ejecucion: dict) -> None:
+def _ciclo_en_segundo_plano(motor, argumentos: dict, ejecucion: dict) -> None:
     try:
-        ciclo.ejecutar_ciclo(motor, peticion.origen, peticion.dias, peticion.reentrenar, ejecucion)
+        ciclo.ejecutar_ciclo(motor, argumentos["origen"], argumentos["dias"], argumentos["reentrenar"], ejecucion)
         _cargar_estado(motor)
     except Exception as error:
         log("api").error("ciclo_api_fallido", execution_id=ejecucion["id"], error=describir_error(error))
@@ -416,6 +439,13 @@ def listar_segmentos(routeId: int | None = None, geometry: bool = False):
         return segmentos_consultas.catalogo(conn, routeId, geometry)
 
 
+@router.get("/segments/map", dependencies=[Depends(LECTOR)])
+def mapa_de_segmentos(dayType: Literal["habil", "sabado", "dom_fest"] = "habil", hour: int = Query(7, ge=0, le=23),
+                      routeId: int | None = None):
+    with _motor().connect() as conn:
+        return segmentos_consultas.mapa(conn, dayType, hour, routeId, _vista()["nombres"])
+
+
 @router.get("/segments/profile", dependencies=[Depends(LECTOR)])
 def perfil_por_segmento(routeId: int, dayType: Literal["habil", "sabado", "dom_fest"] = "habil",
                         hour: int = Query(7, ge=0, le=23)):
@@ -436,14 +466,57 @@ def listar_recomendaciones(routeId: int | None = None, desde: datetime | None = 
     return _pagina(filas, total, page, size)
 
 
+@router.get("/overview", dependencies=[Depends(LECTOR)])
+def resumen_del_dia(day: date | None = None, at: datetime | None = None):
+    vista = _vista()
+    obs = vista["serie"][vista["serie"]["observado"]]
+    ultimo = obs["ts"].max()
+    dia = pd.Timestamp(day) if day else ultimo.normalize()
+    referencia = _a_local(at) if at else resumen.referencia_por_defecto(dia, _a_local(ahora_utc()))
+    desde, hasta = a_zona(dia), a_zona(dia + pd.Timedelta(days=1))
+    with _motor().connect() as conn:
+        recs = recomendaciones.vigentes_por_hora(conn, desde, hasta)
+        abiertas = alertas.abiertas_por_ruta(conn)
+        pendientes = alertas.pendientes_en(conn, desde, hasta)
+    rutas = []
+    for id_ruta in sorted(int(r) for r in obs["id_ruta"].unique()):
+        observado = obs[obs["id_ruta"] == id_ruta].set_index("ts")["subidas"]
+        ventana = None if vista["viajes"] is None else oferta.ventana_servicio(vista["viajes"], id_ruta, dia)
+        rutas.append(resumen.ruta(
+            id_ruta, vista["nombres"].get(id_ruta), [r for r in recs if r["id_ruta"] == id_ruta], observado, referencia,
+            abiertas.get(id_ruta, {"abiertas": 0, "criticas": 0}),
+            [a for a in pendientes if a["id_ruta"] == id_ruta], ventana))
+    tipo = segmentos_carga.tipos_dia(pd.Series([dia]), vista["calendario"]).iloc[0]
+    return _limpio({"dia": dia.date(), "tipoDia": tipo, "referencia": referencia, "ultimoDato": ultimo,
+                    "rutas": rutas})
+
+
 @router.get("/alerts", response_model=esq.Pagina, dependencies=[Depends(LECTOR)])
 def listar_alertas(status: str | None = None, severity: str | None = None, code: str | None = None,
                    routeId: int | None = None, desde: datetime | None = Query(None, alias="from"),
-                   hasta: datetime | None = Query(None, alias="to"), page: int = 1, size: int = 50):
+                   hasta: datetime | None = Query(None, alias="to"), windowFrom: datetime | None = None,
+                   windowTo: datetime | None = None, page: int = 1, size: int = 50):
     with _motor().connect() as conn:
         filas, total = alertas.consultar(conn, status, severity, code, routeId, _a_zona(desde), _a_zona(hasta), page,
-                                         size)
+                                         size, ventana_desde=_a_zona(windowFrom), ventana_hasta=_a_zona(windowTo))
     return _pagina(filas, total, page, size)
+
+
+@router.get("/alerts/groups", response_model=esq.Pagina, dependencies=[Depends(LECTOR)])
+def agrupar_alertas(status: str | None = None, severity: str | None = None, code: str | None = None,
+                    routeId: int | None = None, windowFrom: datetime | None = None, windowTo: datetime | None = None,
+                    page: int = 1, size: int = 50):
+    with _motor().connect() as conn:
+        grupos, total = alertas.agrupar(conn, status, severity, code, routeId, _a_zona(windowFrom),
+                                        _a_zona(windowTo), page, size)
+    return _pagina(grupos, total, page, size)
+
+
+@router.post("/alerts/status")
+def cambiar_estado_alertas(peticion: esq.PeticionEstadoAlertas, quien: dict = Depends(OPERADOR)):
+    with _motor().begin() as conn:
+        return alertas.cambiar_estados(conn, peticion.ids, peticion.estado, _usuario(quien, peticion.usuario),
+                                       peticion.comentario, peticion.usuario_asignado)
 
 
 @router.get("/alerts/summary", dependencies=[Depends(LECTOR)])
@@ -475,17 +548,34 @@ def cambiar_estado_alerta(id_alerta: uuid.UUID, peticion: esq.PeticionEstadoAler
 def crear_ejecucion(peticion: esq.PeticionEjecucion, tareas: BackgroundTasks, request: Request,
                     quien: dict = Depends(OPERADOR)):
     motor = _motor()
+    argumentos = peticion.model_dump()
+    return _lanzar(motor, tareas, argumentos, lambda: ciclo.iniciar(
+        motor, peticion.origen, peticion.dias, peticion.reentrenar, request.state.correlation_id, quien["nombre"]))
+
+
+def _lanzar(motor, tareas: BackgroundTasks, argumentos: dict, crear) -> dict:
     if not CICLO.acquire(blocking=False):
-        raise HTTPException(409, "Ya hay un ciclo en curso; consulte GET /api/v1/frequency/executions.")
+        raise HTTPException(409, "Ya hay un ciclo en curso en este proceso; consulte GET /api/v1/frequency/executions.")
     try:
-        ejecucion = ciclo.iniciar(motor, peticion.origen, peticion.dias, peticion.reentrenar,
-                                  request.state.correlation_id, quien["nombre"])
+        trabajos.recuperar(motor)
+        ejecucion = crear()
+    except ciclo.CicloEnCurso as error:
+        CICLO.release()
+        raise HTTPException(409, str(error)) from error
     except Exception:
         CICLO.release()
         raise
-    tareas.add_task(_ciclo_en_segundo_plano, motor, peticion, ejecucion)
+    if isinstance(ejecucion, tuple):
+        ejecucion, argumentos = ejecucion
+    tareas.add_task(_ciclo_en_segundo_plano, motor, argumentos, ejecucion)
     return {"executionId": ejecucion["id"], "correlationId": str(ejecucion["correlation_id"]), "status": "en_curso",
-            "location": f"{PREFIJO}/frequency/executions/{ejecucion['id']}"}
+            "attempt": ejecucion.get("intento", 1), "location": f"{PREFIJO}/frequency/executions/{ejecucion['id']}"}
+
+
+@router.post("/frequency/executions/{id_ejecucion}/retry", status_code=202)
+def reintentar_ejecucion(id_ejecucion: int, tareas: BackgroundTasks, quien: dict = Depends(OPERADOR)):
+    motor = _motor()
+    return _lanzar(motor, tareas, {}, lambda: ciclo.preparar_reintento(motor, id_ejecucion, quien["nombre"]))
 
 
 @router.get("/frequency/executions", response_model=esq.Pagina, dependencies=[Depends(LECTOR)])
@@ -503,6 +593,22 @@ def obtener_ejecucion(id_ejecucion: int):
         if fila is None:
             raise LookupError(f"No existe la ejecucion {id_ejecucion}.")
         return {**fila, "calidad": calidad.resumen(conn, id_ejecucion)}
+
+
+@router.get("/monitoring", dependencies=[Depends(LECTOR)])
+def ultimo_monitoreo():
+    with _motor().connect() as conn:
+        filas = monitoreo.ultimos(conn)
+    return {"metricas": filas, "alertas": sum(1 for f in filas if f["estado"] == "alerta")}
+
+
+@router.get("/monitoring/history", response_model=esq.Pagina, dependencies=[Depends(LECTOR)])
+def historial_monitoreo(metric: str | None = None, scope: str | None = None,
+                        desde: datetime | None = Query(None, alias="from"),
+                        hasta: datetime | None = Query(None, alias="to"), page: int = 1, size: int = 50):
+    with _motor().connect() as conn:
+        filas, total = monitoreo.historial(conn, metric, scope, _a_zona(desde), _a_zona(hasta), page, size)
+    return _pagina(filas, total, page, size)
 
 
 @router.get("/data-quality", response_model=esq.Pagina, dependencies=[Depends(LECTOR)])

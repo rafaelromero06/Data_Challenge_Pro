@@ -1,17 +1,20 @@
 name: frecuencias
 
-x-base-ia: &base-ia
-  AI_DB_HOST: db
-  AI_DB_PORT: "5432"
-  AI_DB_NAME: ${AI_DB_NAME:-frecuencias}
-  AI_DB_USER: ${AI_DB_USER:-frecuencias}
-  AI_DB_PASSWORD: ${AI_DB_PASSWORD:?Defina AI_DB_PASSWORD en .env}
+x-fuente: &fuente
   SOBUSA_DB_HOST: ${SOBUSA_DB_HOST:-}
   SOBUSA_DB_PORT: ${SOBUSA_DB_PORT:-5432}
   SOBUSA_DB_NAME: ${SOBUSA_DB_NAME:-dataset}
   SOBUSA_DB_USER: ${SOBUSA_DB_USER:-}
   SOBUSA_DB_PASSWORD: ${SOBUSA_DB_PASSWORD:-${PGPASSWORD:-}}
   SOBUSA_DB_SSLMODE: ${SOBUSA_DB_SSLMODE:-prefer}
+
+x-base-ia: &base-ia
+  <<: *fuente
+  AI_DB_HOST: db
+  AI_DB_PORT: "5432"
+  AI_DB_NAME: ${AI_DB_NAME:-frecuencias}
+  AI_DB_USER: ${AI_DB_APP_USER:-frecuencias_app}
+  AI_DB_PASSWORD: ${AI_DB_APP_PASSWORD:?Defina AI_DB_APP_PASSWORD en .env}
   ENTORNO: ${ENTORNO:-desarrollo}
   API_DOCS: ${API_DOCS:-}
   API_AUTENTICACION: ${API_AUTENTICACION:-activa}
@@ -29,6 +32,12 @@ x-base-ia: &base-ia
   NOTIFICACION_WHATSAPP_TELEFONO_ID: ${NOTIFICACION_WHATSAPP_TELEFONO_ID:-}
   NOTIFICACION_WHATSAPP_PLANTILLA: ${NOTIFICACION_WHATSAPP_PLANTILLA:-}
   CICLO_SEGMENTOS: ${CICLO_SEGMENTOS:-activa}
+  CICLO_INTENTOS: ${CICLO_INTENTOS:-3}
+  CICLO_REANUDAR: ${CICLO_REANUDAR:-activa}
+  REENTRENO_CADA_DIAS: ${REENTRENO_CADA_DIAS:-7}
+  REENTRENO_MIN_HORAS: ${REENTRENO_MIN_HORAS:-24}
+  OTEL_TRACES_EXPORTER: ${OTEL_TRACES_EXPORTER:-none}
+  OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://jaeger:4318}
 
 services:
   db:
@@ -50,12 +59,28 @@ services:
       retries: 20
     restart: unless-stopped
 
+  migraciones:
+    build: .
+    command: ["sh", "-c", "alembic upgrade head && python -m frecuencias.persistencia.roles"]
+    environment:
+      AI_DB_HOST: db
+      AI_DB_PORT: "5432"
+      AI_DB_NAME: ${AI_DB_NAME:-frecuencias}
+      AI_DB_USER: ${AI_DB_USER:-frecuencias}
+      AI_DB_PASSWORD: ${AI_DB_PASSWORD:?Defina AI_DB_PASSWORD en .env}
+      AI_DB_APP_USER: ${AI_DB_APP_USER:-frecuencias_app}
+      AI_DB_APP_PASSWORD: ${AI_DB_APP_PASSWORD:?Defina AI_DB_APP_PASSWORD en .env}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
   api:
     build: .
     environment: *base-ia
     depends_on:
-      db:
-        condition: service_healthy
+      migraciones:
+        condition: service_completed_successfully
     ports:
       - "${API_PORT:-8000}:8000"
     volumes:
@@ -86,5 +111,26 @@ services:
       - ./modelos:/app/modelos
     restart: unless-stopped
 
+  jaeger:
+    image: jaegertracing/all-in-one:1.62.0
+    profiles: ["observabilidad"]
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"
+    restart: unless-stopped
+
+  sonarqube:
+    image: sonarqube:community
+    profiles: ["calidad"]
+    ports:
+      - "9000:9000"
+    volumes:
+      - sonar_datos:/opt/sonarqube/data
+      - sonar_extensiones:/opt/sonarqube/extensions
+    restart: unless-stopped
+
 volumes:
   datos_ai:
+  sonar_datos:
+  sonar_extensiones:

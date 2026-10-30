@@ -4,7 +4,6 @@ from frecuencias.optimizacion.parametros import ParametrosHora
 
 REGLAS_CONSOLIDADO = {"CAL-003", "CAL-007", "CAL-008"}
 REGLAS_INCOMPLETOS = {"CAL-004"}
-TOLERANCIA_DESPACHO = 2.0
 
 
 def _hora(ts) -> str:
@@ -96,24 +95,42 @@ def por_observacion(obs: dict, error_pronostico: float) -> list[dict]:
     return []
 
 
-def por_despachos(salidas: pd.Series, id_ruta: int, headway_programado: float, desde, hasta) -> list[dict]:
-    salidas = salidas.sort_values()
-    salidas = salidas[(salidas >= desde) & (salidas < hasta)]
-    if len(salidas) < 2:
+def _causa_despacho(fila) -> str:
+    if fila["cancelada"]:
+        return "cancelado"
+    return "sin iniciar" if pd.isna(fila["fechainicio"]) else "fuera de plazo"
+
+
+def por_despachos(viajes: pd.DataFrame, id_ruta: int, desde, hasta, minimo: float, proporcion: float) -> list[dict]:
+    programados = viajes[(viajes["id_ruta"] == id_ruta) & (viajes["fechasalida"] >= desde)
+                         & (viajes["fechasalida"] < hasta)].copy()
+    if programados.empty:
         return []
-    huecos = salidas.diff().dt.total_seconds().div(60)
-    limite = TOLERANCIA_DESPACHO * headway_programado
+    programados["cancelada"] = programados["cancelada"].astype(bool)
+    tarde = programados["excede_plazo_salida"].fillna(False).astype(bool)
+    programados["fallido"] = programados["cancelada"] | programados["fechainicio"].isna() | tarde
+    programados["hora"] = programados["fechasalida"].dt.floor("h")
     alertas = []
-    for posicion in huecos.index[huecos > limite]:
-        fin = salidas[posicion]
-        inicio = fin - pd.Timedelta(minutes=float(huecos[posicion]))
+    for inicio, grupo in programados.groupby("hora"):
+        fallidos = grupo[grupo["fallido"]]
+        cuota = len(fallidos) / len(grupo)
+        if len(fallidos) < minimo or cuota < proporcion:
+            continue
+        causas = fallidos.apply(_causa_despacho, axis=1)
+        conteo = causas.value_counts()
+        detalle = ", ".join(f"{n} {causa}" for causa, n in conteo.items())
+        variables = [{"variable": "despachos_programados", "valor": int(len(grupo))}] + [
+            {"variable": f"despachos_{causa.replace(' ', '_')}", "valor": int(n)} for causa, n in conteo.items()] + [
+            {"variable": "despacho_fallido", "valor": f"{f['fechasalida']:%H:%M} {f['idvehiculo']} ({causa})"}
+            for (_, f), causa in list(zip(fallidos.iterrows(), causas))[:10]]
         alertas.append(_alerta(
-            "ALT-006", "critica", id_ruta, inicio, fin,
-            f"Pasaron {huecos[posicion]:.0f} min sin despachos entre {inicio:%H:%M} y {fin:%H:%M}; "
-            f"el intervalo habitual es {headway_programado:.0f} min.",
-            "Verificar disponibilidad de vehiculos y la operacion en terminal.",
-            valor_observado=round(float(huecos[posicion]), 1), valor_esperado=round(headway_programado, 1),
-            umbral=round(limite, 1)))
+            "ALT-006", "critica", id_ruta, inicio, inicio + pd.Timedelta(hours=1),
+            f"De {len(grupo)} despachos programados entre {inicio:%H:%M} y {inicio + pd.Timedelta(hours=1):%H:%M}, "
+            f"{len(fallidos)} ({cuota:.0%}) no salieron dentro de tolerancia: {detalle}.",
+            "Verificar disponibilidad de vehiculos y conductores y la operacion en terminal; reponer los despachos "
+            "faltantes si la demanda de la franja lo exige.",
+            valor_observado=round(cuota * 100, 1), valor_esperado=0.0, umbral=round(proporcion * 100, 1),
+            puntuacion_anomalia=round(cuota, 3), variables_influyentes=variables))
     return alertas
 
 
@@ -165,6 +182,20 @@ def por_fuente_no_disponible(error: str, ahora) -> list[dict]:
                     f"No se pudo leer la base del operador despues de los reintentos: {error}",
                     "Restablecer la conexion con la fuente y volver a ejecutar el ciclo; la marca de agua no avanzo.",
                     clave=f"ALT-009:fuente:{inicio:%Y-%m-%d}")]
+
+
+def por_cobertura(cobertura: float | None, minimo: float, horizonte_min: int, model_registry_id: int | None,
+                  desde, hasta, franjas: int) -> list[dict]:
+    if cobertura is None or cobertura >= minimo:
+        return []
+    return [_alerta("ALT-010", "critica", None, desde, hasta,
+                    f"Solo el {cobertura:.0%} de {franjas} franjas observadas cayo dentro del intervalo p10-p90 del "
+                    f"modelo a {horizonte_min} min (nominal 80 %, minimo aceptado {minimo:.0%}): la incertidumbre "
+                    f"esta mal calibrada.",
+                    "Recalibrar los cuantiles o reentrenar un modelo candidato y compararlo con el activo.",
+                    clave=f"ALT-010:cobertura:h{horizonte_min}:{pd.Timestamp(hasta):%Y-%m-%d}",
+                    horizonte_min=horizonte_min, valor_observado=round(cobertura * 100, 2), valor_esperado=80.0,
+                    umbral=round(minimo * 100, 2), model_registry_id=model_registry_id)]
 
 
 def por_modelo(wape_movil: float | None, tolerancia: float, horizonte_min: int, model_registry_id: int | None,

@@ -91,6 +91,12 @@ ejecucion = Table(
     Column("registros_rechazados", Integer),
     Column("detalle", JSONB),
     Column("error", Text),
+    Column("propietario", Text),
+    _momento("latido_en"),
+    Column("etapa", Text),
+    Column("avance", Numeric(4, 1)),
+    Column("intento", SmallInteger, nullable=False, server_default=text("1")),
+    Column("reintento_de", BigInteger, _fk("execution_log")),
 )
 
 prediccion = Table(
@@ -319,6 +325,26 @@ clave_api = Table(
     _momento("creada_en", nullable=False),
     _momento("revocada_en"),
     _momento("ultimo_uso"),
+)
+
+metrica_monitoreo = Table(
+    "monitoring_metric", metadata,
+    Column("id", BigInteger, primary_key=True),
+    Column("execution_id", BigInteger, _fk("execution_log")),
+    Column("metrica", Text, nullable=False),
+    Column("alcance", Text, nullable=False),
+    Column("id_ruta", Integer),
+    Column("horizonte_min", SmallInteger),
+    Column("model_registry_id", BigInteger, _fk("model_registry")),
+    _momento("ventana_desde", nullable=False),
+    _momento("ventana_hasta", nullable=False),
+    Column("valor", Numeric(12, 4)),
+    Column("referencia", Numeric(12, 4)),
+    Column("umbral", Numeric(12, 4)),
+    Column("estado", Text, nullable=False),
+    Column("muestras", Integer),
+    Column("detalle", JSONB),
+    _momento("calculado_en", nullable=False, server_default=text("now()")),
 )
 
 instantanea = Table(

@@ -1,0 +1,68 @@
+{
+ "usuarios": 10,
+ "duracion_s": 62.3,
+ "peticiones": 1076,
+ "peticiones_por_segundo": 17.3,
+ "errores": 0,
+ "p95_global_ms": 4417.2,
+ "p95_maximo_consultas_paginadas_ms": 145.7,
+ "cumple_rnf_002": true,
+ "por_consulta": {
+  "alertas filtradas": {
+   "peticiones": 127,
+   "errores": 0,
+   "p50_ms": 88.6,
+   "p95_ms": 128.8,
+   "p99_ms": 148.7
+  },
+  "ejecuciones": {
+   "peticiones": 138,
+   "errores": 0,
+   "p50_ms": 89.1,
+   "p95_ms": 128.7,
+   "p99_ms": 165.9
+  },
+  "perfil por segmento": {
+   "peticiones": 122,
+   "errores": 0,
+   "p50_ms": 81.4,
+   "p95_ms": 118.8,
+   "p99_ms": 138.2
+  },
+  "prediccion bajo demanda": {
+   "peticiones": 121,
+   "errores": 0,
+   "p50_ms": 4394.5,
+   "p95_ms": 4735.8,
+   "p99_ms": 4970.6
+  },
+  "predicciones paginadas": {
+   "peticiones": 139,
+   "errores": 0,
+   "p50_ms": 93.8,
+   "p95_ms": 145.7,
+   "p99_ms": 160.2
+  },
+  "predicciones por ruta": {
+   "peticiones": 163,
+   "errores": 0,
+   "p50_ms": 96.6,
+   "p95_ms": 144.0,
+   "p99_ms": 160.5
+  },
+  "recomendaciones paginadas": {
+   "peticiones": 127,
+   "errores": 0,
+   "p50_ms": 93.8,
+   "p95_ms": 138.2,
+   "p99_ms": 184.9
+  },
+  "resumen de alertas": {
+   "peticiones": 139,
+   "errores": 0,
+   "p50_ms": 74.9,
+   "p95_ms": 112.7,
+   "p99_ms": 123.0
+  }
+ }
+}

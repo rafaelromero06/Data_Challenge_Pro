@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import insert, select
+from sqlalchemy import func, insert, select
 from sqlalchemy.engine import Connection
 
 from frecuencias.persistencia.consultas import paginar
@@ -29,3 +29,12 @@ def consultar(conn: Connection, id_ruta: int | None = None, desde: datetime | No
     if execution_id is not None:
         consulta = consulta.where(recomendacion.c.execution_id == execution_id)
     return paginar(conn, consulta, recomendacion, orden, descendente, pagina, tamano)
+
+
+def vigentes_por_hora(conn: Connection, desde: datetime, hasta: datetime) -> list[dict]:
+    hora = func.date_trunc("hour", recomendacion.c.franja_inicio)
+    consulta = (select(recomendacion)
+                .where(recomendacion.c.franja_inicio >= desde, recomendacion.c.franja_inicio < hasta)
+                .distinct(recomendacion.c.id_ruta, hora)
+                .order_by(recomendacion.c.id_ruta, hora, recomendacion.c.generada_en.desc()))
+    return [dict(f) for f in conn.execute(consulta).mappings()]

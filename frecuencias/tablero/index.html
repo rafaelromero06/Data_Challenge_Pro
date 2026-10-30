@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SOBUSA Frecuencias</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%231f5fbf'/%3E%3Cpath d='M3 11h10M5 5h6v6H5z' stroke='white' fill='none'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous">
 <link rel="stylesheet" href="estilos.css">
 </head>
 <body>
@@ -28,7 +30,9 @@
 </header>
 
 <nav class="pestanas" role="tablist" aria-label="Secciones">
-  <button role="tab" id="tab-prediccion" aria-controls="panel-prediccion" aria-selected="true">Predicción</button>
+  <button role="tab" id="tab-hoy" aria-controls="panel-hoy" aria-selected="true">Hoy</button>
+  <button role="tab" id="tab-mapa" aria-controls="panel-mapa" aria-selected="false" tabindex="-1">Mapa</button>
+  <button role="tab" id="tab-prediccion" aria-controls="panel-prediccion" aria-selected="false" tabindex="-1">Predicción</button>
   <button role="tab" id="tab-alertas" aria-controls="panel-alertas" aria-selected="false" tabindex="-1">Alertas</button>
   <button role="tab" id="tab-ejecuciones" aria-controls="panel-ejecuciones" aria-selected="false" tabindex="-1">Ejecuciones</button>
   <button role="tab" id="tab-modelos" aria-controls="panel-modelos" aria-selected="false" tabindex="-1">Modelos</button>
@@ -39,7 +43,41 @@
 <main id="contenido">
   <p class="aviso" id="aviso" role="status" aria-live="polite" hidden></p>
 
-  <section role="tabpanel" id="panel-prediccion" aria-labelledby="tab-prediccion">
+  <section role="tabpanel" id="panel-hoy" aria-labelledby="tab-hoy">
+    <form id="form-hoy" class="filtros">
+      <label>Día <input type="date" id="hoy-dia"></label>
+      <label>Hora de referencia <input type="time" id="hoy-hora" step="900"></label>
+      <button type="submit" class="primario">Ver</button>
+    </form>
+    <p class="sub" id="hoy-resumen" aria-live="polite"></p>
+    <div class="tarjetas rutas-hoy" id="hoy-rutas"><p class="nota">Ingrese la clave de acceso para ver la situación del día.</p></div>
+    <ul class="leyenda" aria-label="Convenciones de la franja por hora">
+      <li><span class="m m-agregar"></span>Faltan buses</li>
+      <li><span class="m m-reducir"></span>Sobran buses</li>
+      <li><span class="m m-mantener"></span>Oferta adecuada</li>
+      <li><span class="m m-no_viable"></span>No viable</li>
+      <li><span class="m m-fuera"></span>Fuera del horario de despachos</li>
+      <li>Número grande: buses recomendados · pequeño: operados</li>
+    </ul>
+  </section>
+
+  <section role="tabpanel" id="panel-mapa" aria-labelledby="tab-mapa" hidden>
+    <form id="form-mapa" class="filtros">
+      <label>Ruta <select id="mapa-ruta"><option value="">todas</option></select></label>
+      <label>Tipo de día
+        <select id="mapa-tipo"><option value="habil">hábil</option><option value="sabado">sábado</option><option value="dom_fest">domingo o festivo</option></select>
+      </label>
+      <label>Hora <select id="mapa-hora"></select></label>
+      <button type="submit" class="primario">Ver</button>
+    </form>
+    <p class="sub" id="mapa-resumen" aria-live="polite"></p>
+    <div id="mapa" class="mapa" role="region" aria-label="Mapa de Barranquilla con las rutas y la carga por segmento"></div>
+    <ul class="leyenda" id="mapa-leyenda" aria-label="Convenciones del mapa"></ul>
+    <h2 id="mapa-tabla-titulo">Segmentos más cargados (los de mayor carga p90; con todas las rutas, los 4 de cada una)</h2>
+    <div class="tabla-envoltura"><table id="mapa-tabla" aria-labelledby="mapa-tabla-titulo"><thead><tr><th scope="col">Segmento</th></tr></thead><tbody><tr><td>Sin datos todavía</td></tr></tbody></table></div>
+  </section>
+
+  <section role="tabpanel" id="panel-prediccion" aria-labelledby="tab-prediccion" hidden>
     <form id="form-prediccion" class="filtros">
       <label>Ruta <select id="pred-ruta" required></select></label>
       <label>Referencia (hora local) <input type="datetime-local" id="pred-referencia" step="900"></label>
@@ -66,20 +104,37 @@
   </section>
 
   <section role="tabpanel" id="panel-alertas" aria-labelledby="tab-alertas" hidden>
+    <div class="vista" role="group" aria-label="Forma de ver las alertas">
+      <button type="button" id="al-vista-grupos" aria-pressed="true">Agrupadas</button>
+      <button type="button" id="al-vista-lista" aria-pressed="false">Una por una</button>
+    </div>
     <form id="form-alertas" class="filtros">
       <label>Estado
         <select id="al-estado">
-          <option value="">todos</option><option>abierta</option><option>reconocida</option>
-          <option>asignada</option><option>cerrada</option><option>descartada</option>
+          <option value="pendiente" selected>pendientes</option><option value="">todos</option><option>abierta</option>
+          <option>reconocida</option><option>asignada</option><option>cerrada</option><option>descartada</option>
         </select>
       </label>
       <label>Severidad
-        <select id="al-severidad"><option value="">todas</option><option>critica</option><option>alta</option><option>media</option><option>baja</option></select>
+        <select id="al-severidad"><option value="">todas</option><option>critica</option><option>preventiva</option><option>informativa</option></select>
       </label>
       <label>Ruta <select id="al-ruta"><option value="">todas</option></select></label>
       <button type="submit">Filtrar</button>
     </form>
-    <div class="tabla-envoltura"><table id="al-tabla"><thead><tr><th scope="col">Alerta</th></tr></thead><tbody><tr><td>Sin datos todavía</td></tr></tbody></table></div>
+    <p class="sub" id="al-filtro-grupo" hidden></p>
+    <form id="form-lote" class="filtros lote">
+      <label class="check"><input type="checkbox" id="al-todos"> Seleccionar los grupos de esta página</label>
+      <span id="al-seleccion" class="sub" aria-live="polite">Ninguna alerta seleccionada</span>
+      <label>Nuevo estado
+        <select id="al-lote-estado"><option>reconocida</option><option>asignada</option><option>cerrada</option><option>descartada</option></select>
+      </label>
+      <label>Asignar a <input id="al-lote-asignado"></label>
+      <label class="ancho">Comentario <input id="al-lote-comentario"></label>
+      <label>Usuario (sin clave) <input id="al-lote-usuario" autocomplete="username"></label>
+      <button type="submit" class="primario" id="al-lote-aplicar" disabled>Aplicar a las seleccionadas</button>
+    </form>
+    <div class="tabla-envoltura" id="al-grupos-envoltura"><table id="al-grupos"><thead><tr><th scope="col">Grupo</th></tr></thead><tbody><tr><td>Sin datos todavía</td></tr></tbody></table></div>
+    <div class="tabla-envoltura" id="al-lista-envoltura" hidden><table id="al-tabla"><thead><tr><th scope="col">Alerta</th></tr></thead><tbody><tr><td>Sin datos todavía</td></tr></tbody></table></div>
     <div class="paginador" id="al-paginador"></div>
     <section id="al-detalle" class="detalle" hidden aria-labelledby="al-detalle-titulo">
       <h2 id="al-detalle-titulo">Alerta</h2>
@@ -112,6 +167,8 @@
   <section role="tabpanel" id="panel-modelos" aria-labelledby="tab-modelos" hidden>
     <label class="filtros">Usuario que aprueba (sin clave) <input id="mo-usuario" autocomplete="username"></label>
     <div class="tabla-envoltura"><table id="mo-tabla"><thead><tr><th scope="col">Modelo</th></tr></thead><tbody><tr><td>Sin datos todavía</td></tr></tbody></table></div>
+    <h2 id="mon-titulo">Monitoreo del modelo y los datos</h2>
+    <div class="tabla-envoltura"><table id="mon-tabla" aria-labelledby="mon-titulo"><thead><tr><th scope="col">Métrica</th></tr></thead><tbody><tr><td>Sin datos todavía</td></tr></tbody></table></div>
   </section>
 
   <section role="tabpanel" id="panel-parametros" aria-labelledby="tab-parametros" hidden>
@@ -145,6 +202,8 @@
     <p class="nota">Las fechas se interpretan en hora local de Barranquilla. La exportación está limitada a 100 000 filas.</p>
   </section>
 </main>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous" async></script>
 <script src="app.js"></script>
 </body>
 </html>

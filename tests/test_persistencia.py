@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -110,3 +111,53 @@ def test_umbral_versionado_y_por_ruta(conn):
     assert parametros.vigentes(conn, 16)["ocupacion_critica"] == general + 2
     with pytest.raises(ValueError):
         parametros.publicar(conn, "clave_inexistente", 1, "prueba")
+
+
+def _alerta_de_prueba(conn, codigo, ruta, hora, severidad="preventiva"):
+    inicio = datetime(2031, 3, 4, hora, 0, tzinfo=timezone(timedelta(hours=-5)))
+    return alertas.registrar(conn, {"codigo": codigo, "severidad": severidad, "id_ruta": ruta,
+                                    "clave_deduplicacion": f"prueba-grupo:{codigo}:{ruta}:{hora}",
+                                    "ventana_inicio": inicio, "ventana_fin": inicio + timedelta(hours=1),
+                                    "explicacion": f"Prueba {codigo} a las {hora}"})[0]
+
+
+def test_alertas_agrupadas_por_ruta_codigo_y_dia(conn):
+    ids = [_alerta_de_prueba(conn, "ALT-003", 16, h) for h in (6, 7, 8, 17)]
+    _alerta_de_prueba(conn, "ALT-002", 16, 7, "critica")
+    desde = datetime(2031, 3, 4, tzinfo=timezone(timedelta(hours=-5)))
+    grupos, total = alertas.agrupar(conn, "pendiente", ventana_desde=desde, ventana_hasta=desde + timedelta(days=1))
+    assert total == 2
+    assert [g["codigo"] for g in grupos] == ["ALT-002", "ALT-003"]
+    assert grupos[1]["alertas"] == 4
+    assert grupos[1]["horas"] == [6, 7, 8, 17]
+    assert grupos[1]["ejemplo"] == "Prueba ALT-003 a las 17"
+    assert set(grupos[1]["ids"]) == {str(i) for i in ids}
+    assert str(grupos[1]["dia"]) == "2031-03-04"
+    pendientes = alertas.pendientes_en(conn, desde, desde + timedelta(days=1))
+    assert [a["codigo"] for a in pendientes][0] == "ALT-002"
+    assert alertas.abiertas_por_ruta(conn)[16]["criticas"] >= 1
+
+
+def test_cambio_de_estado_en_lote_informa_lo_que_no_pudo_cambiar(conn):
+    ids = [_alerta_de_prueba(conn, "ALT-004", 21, h) for h in (9, 10)]
+    alertas.cambiar_estado(conn, ids[1], "cerrada", "prueba", "ya resuelta")
+    resultado = alertas.cambiar_estados(conn, [*ids, ids[0], uuid.uuid4()], "reconocida", "ana", "revisado en lote")
+    assert resultado["actualizadas"] == 1
+    assert len(resultado["errores"]) == 2
+    assert alertas.obtener(conn, ids[0])["estado"] == "reconocida"
+    assert alertas.historial(conn, ids[0])[-1]["comentario"] == "revisado en lote"
+    with pytest.raises(ValueError):
+        alertas.cambiar_estados(conn, [uuid.uuid4()] * (alertas.MAXIMO_LOTE + 1), "reconocida", "ana")
+
+
+def test_recomendacion_vigente_por_hora_es_la_mas_reciente(conn):
+    id_prediccion = predicciones.guardar(conn, [_prediccion(_modelo(conn))])[0]
+    base = {"prediction_id": id_prediccion, "id_ruta": 16, "franja_inicio": REFERENCIA + timedelta(minutes=15),
+            "franja_fin": REFERENCIA + timedelta(minutes=75), "headway_min": 7.5, "vehiculos_requeridos": 12,
+            "viable": True}
+    recomendaciones.guardar(conn, [{**base, "buses_por_hora": 8}])
+    recomendaciones.guardar(conn, [{**base, "buses_por_hora": 9,
+                                    "generada_en": datetime.now(timezone.utc) + timedelta(seconds=1)}])
+    vigentes = [r for r in recomendaciones.vigentes_por_hora(conn, REFERENCIA, REFERENCIA + timedelta(hours=2))
+                if r["id_ruta"] == 16]
+    assert [r["buses_por_hora"] for r in vigentes] == [9]

@@ -28,7 +28,8 @@ jobs:
       AI_DB_NAME: frecuencias
       AI_DB_USER: frecuencias
       AI_DB_PASSWORD: ci-frecuencias
-      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      AI_DB_APP_USER: frecuencias_app
+      AI_DB_APP_PASSWORD: ci-frecuencias-aplicacion
     steps:
       - uses: actions/checkout@v4
         with:
@@ -40,6 +41,7 @@ jobs:
       - run: pip install -r requirements-dev.txt
       - run: python -m alembic upgrade head
       - run: python -m alembic downgrade base && python -m alembic upgrade head
+      - run: python -m frecuencias.persistencia.roles
       - run: python -m pytest -m "not lenta" --cov=frecuencias --cov-report=xml --cov-report=term --junitxml=reporte-pruebas.xml
       - uses: actions/upload-artifact@v4
         if: always()
@@ -48,11 +50,54 @@ jobs:
           path: |
             coverage.xml
             reporte-pruebas.xml
-      - name: SonarQube
-        if: ${{ env.SONAR_TOKEN != '' }}
-        uses: SonarSource/sonarqube-scan-action@v5
+
+  calidad:
+    runs-on: ubuntu-latest
+    needs: pruebas
+    services:
+      sonarqube:
+        image: sonarqube:community
         env:
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+          SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
+        ports:
+          - 9000:9000
+    env:
+      SONAR_HOST_URL: http://localhost:9000
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install httpx==0.28.1
+      - uses: actions/download-artifact@v4
+        with:
+          name: reportes-pruebas
+      - name: Esperar a SonarQube y crear un token de analisis
+        run: |
+          for intento in $(seq 1 60); do
+            estado=$(curl -s "$SONAR_HOST_URL/api/system/status" | python -c "import json,sys; print(json.load(sys.stdin).get('status',''))" 2>/dev/null || true)
+            [ "$estado" = "UP" ] && break
+            sleep 5
+          done
+          [ "$estado" = "UP" ] || { echo "SonarQube no arranco"; exit 1; }
+          clave="Ci-$(openssl rand -hex 16)-X9"
+          curl -sf -u admin:admin -X POST "$SONAR_HOST_URL/api/users/change_password" \
+            --data-urlencode "login=admin" --data-urlencode "previousPassword=admin" --data-urlencode "password=$clave"
+          token=$(curl -sf -u "admin:$clave" -X POST "$SONAR_HOST_URL/api/user_tokens/generate" \
+            --data-urlencode "name=ci" --data-urlencode "type=GLOBAL_ANALYSIS_TOKEN" \
+            | python -c "import json,sys; print(json.load(sys.stdin)['token'])")
+          echo "::add-mask::$token"
+          echo "SONAR_TOKEN=$token" >> "$GITHUB_ENV"
+      - uses: SonarSource/sonarqube-scan-action@v5
+      - name: Verificar que no haya hallazgos criticos ni bloqueantes
+        run: python pruebas/informe_sonar.py --url "$SONAR_HOST_URL" --salida reportes/sonarqube.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reporte-sonarqube
+          path: reportes/sonarqube.json
 
   imagen:
     runs-on: ubuntu-latest

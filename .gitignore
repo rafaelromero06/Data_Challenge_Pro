@@ -15,3 +15,8 @@ reporte-pruebas.xml
 paper/*.aux
 paper/*.log
 paper/*.out
+docs/fuentes/*.aux
+docs/fuentes/*.log
+docs/fuentes/*.out
+docs/fuentes/*.toc
+docs/fuentes/*.pdf

@@ -1,0 +1,8 @@
+{
+  "prueba": "Caida abrupta de la API (docker kill) con un ciclo en curso y reinicio del contenedor",
+  "fecha": "2026-10-29",
+  "ciclo_original": {"id": 242, "estado_tras_la_caida": "en_curso", "etapa": "ingesta", "avance": 5.0},
+  "tras_reiniciar": {"ciclo_original": "interrumpida", "error": "El proceso que la ejecutaba se detuvo antes de terminar (reinicio o caida)."},
+  "reanudacion_automatica": {"id": 243, "reintento_de": 242, "intento": 2, "estado": "exitosa", "etapa": "terminada", "avance": 100.0, "servicio": "api"},
+  "cumple_rnf_001": true
+}

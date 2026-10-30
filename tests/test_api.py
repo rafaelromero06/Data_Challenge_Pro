@@ -3,9 +3,12 @@ import uuid
 
 import httpx
 import pytest
+from sqlalchemy import delete
 
 from frecuencias import db, seguridad
 from frecuencias.api import main as api
+from frecuencias.persistencia import ejecuciones
+from frecuencias.persistencia.tablas import ejecucion
 
 pytestmark = [pytest.mark.lenta, pytest.mark.integracion]
 
@@ -149,3 +152,86 @@ def test_tablero_documentacion_y_metricas(cliente):
     assert cliente("GET", "/docs", rol=None).status_code == 200
     respuesta = cliente("GET", "/metrics", rol=None)
     assert respuesta.status_code == 200 and "frecuencias_predicciones_total" in respuesta.text
+
+
+def test_monitoreo_ultimo_e_historial(cliente):
+    ultimo = cliente("GET", "/api/v1/monitoring", rol="lector").json()
+    assert set(ultimo) == {"metricas", "alertas"}
+    assert ultimo["alertas"] == sum(1 for m in ultimo["metricas"] if m["estado"] == "alerta")
+    historial = cliente("GET", "/api/v1/monitoring/history?metric=deriva_psi&size=3", rol="lector").json()
+    assert set(historial) == {"items", "page", "size", "total"}
+    assert all(m["metrica"] == "deriva_psi" for m in historial["items"])
+
+
+def test_reintento_valida_la_ejecucion(cliente):
+    assert cliente("POST", "/api/v1/frequency/executions/999999999/retry").status_code == 404
+    exitosas = cliente("GET", "/api/v1/frequency/executions?type=ciclo&status=exitosa&size=1", rol="lector").json()
+    if exitosas["items"]:
+        respuesta = cliente("POST", f"/api/v1/frequency/executions/{exitosas['items'][0]['id']}/retry")
+        assert respuesta.status_code == 400
+        assert "solo se reintentan" in respuesta.json()["error"]["mensaje"]
+    assert cliente("POST", "/api/v1/frequency/executions/1/retry", rol="lector").status_code == 403
+
+
+def test_ciclo_de_otro_proceso_bloquea_uno_nuevo(cliente):
+    with db.motor_destino().begin() as conn:
+        ajeno = ejecuciones.iniciar(conn, "ciclo", {"prueba": True}, propietario="programador@otro-host#vivo")
+    try:
+        respuesta = cliente("POST", "/api/v1/frequency/executions", json={"origen": "archivos"})
+        assert respuesta.status_code == 409
+        assert respuesta.json()["error"]["codigo"] == "conflicto"
+        detalle = cliente("GET", f"/api/v1/frequency/executions/{ajeno['id']}", rol="lector").json()
+        assert detalle["estado"] == "en_curso"
+        assert detalle["propietario"] == "programador@otro-host#vivo"
+    finally:
+        with db.motor_destino().begin() as conn:
+            conn.execute(delete(ejecucion).where(ejecucion.c.id == ajeno["id"]))
+
+
+def test_resumen_del_dia_por_ruta(cliente, referencia):
+    dia = referencia[:10]
+    cuerpo = cliente("GET", f"/api/v1/overview?day={dia}&at={dia}T07:00", rol="lector").json()
+    assert cuerpo["dia"] == dia
+    assert cuerpo["tipoDia"] in ("habil", "sabado", "dom_fest")
+    assert cuerpo["referencia"].startswith(f"{dia}T07:00")
+    assert [r["routeId"] for r in cuerpo["rutas"]] == [2, 16, 21]
+    ruta = next(r for r in cuerpo["rutas"] if r["routeId"] == 16)
+    assert ruta["routeName"] == "CRA 54"
+    assert {"tipo", "texto", "inicio"} <= set(ruta["ahora"])
+    assert sum(ruta["conteo"].values()) == len(ruta["horas"])
+    assert {"abiertas", "criticas", "delDia", "principales"} <= set(ruta["alertas"])
+    assert ruta["servicio"]["apertura"] < ruta["servicio"]["cierre"]
+    assert cliente("GET", "/api/v1/overview", rol="lector").status_code == 200
+
+
+def test_alertas_agrupadas_y_cambio_en_lote_validado(cliente):
+    grupos = cliente("GET", "/api/v1/alerts/groups?status=pendiente&size=5", rol="lector").json()
+    assert set(grupos) == {"items", "page", "size", "total"}
+    for g in grupos["items"]:
+        assert g["alertas"] == len(g["ids"])
+    lote = cliente("POST", "/api/v1/alerts/status", json={"ids": [str(uuid.uuid4())], "estado": "reconocida"})
+    assert lote.status_code == 200
+    assert lote.json()["actualizadas"] == 0
+    assert "No existe" in lote.json()["errores"][0]["mensaje"]
+    vacio = cliente("POST", "/api/v1/alerts/status", json={"ids": [], "estado": "reconocida"})
+    assert vacio.status_code == 422
+    sin_permiso = cliente("POST", "/api/v1/alerts/status", json={"ids": [str(uuid.uuid4())]}, rol="lector")
+    assert sin_permiso.status_code == 403
+
+
+def test_mapa_de_segmentos_en_geojson(cliente):
+    respuesta = cliente("GET", "/api/v1/segments/map?dayType=habil&hour=7", rol="lector")
+    assert respuesta.status_code == 200
+    mapa = respuesta.json()
+    assert mapa["type"] == "FeatureCollection"
+    assert len(mapa["features"]) > 300
+    geometria = mapa["features"][0]["geometry"]
+    assert geometria["type"] == "LineString"
+    longitud, latitud = geometria["coordinates"][0]
+    assert -75.0 < longitud < -74.7
+    assert 10.8 < latitud < 11.1
+    assert {p["routeId"] for p in mapa["criticalSegments"]} == {2, 16, 21}
+    assert sum(1 for f in mapa["features"] if f["properties"]["critical"]) == 3
+    una = cliente("GET", "/api/v1/segments/map?routeId=16&dayType=dom_fest&hour=20", rol="lector").json()
+    assert {f["properties"]["routeId"] for f in una["features"]} == {16}
+    assert cliente("GET", "/api/v1/segments/map?dayType=lunes", rol="lector").status_code == 422

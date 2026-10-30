@@ -1,6 +1,7 @@
 import os
 
-from sqlalchemy import Column, MetaData, String, Table, create_engine, select
+import sqlalchemy
+from sqlalchemy import Column, MetaData, String, Table, select
 from sqlalchemy.engine import URL, Engine
 
 from frecuencias.config import ESQUEMA_IA, RAIZ
@@ -30,7 +31,7 @@ def motor_fuente() -> Engine:
         port=int(os.environ.get("SOBUSA_DB_PORT", "5432")),
         database=os.environ.get("SOBUSA_DB_NAME", "dataset"),
     )
-    return create_engine(
+    return sqlalchemy.create_engine(
         url,
         connect_args={
             "options": "-c default_transaction_read_only=on -c statement_timeout=300000",
@@ -59,7 +60,7 @@ def motor_destino() -> Engine:
             "Falta configurar la base ai_frecuencias: defina AI_DB_HOST, AI_DB_PORT, "
             "AI_DB_NAME, AI_DB_USER y AI_DB_PASSWORD."
         )
-    return create_engine(url, pool_pre_ping=True, connect_args={"options": "-c statement_timeout=30000"})
+    return sqlalchemy.create_engine(url, pool_pre_ping=True, connect_args={"options": "-c statement_timeout=30000"})
 
 
 def revision_esquema_ia(motor: Engine) -> str | None:
