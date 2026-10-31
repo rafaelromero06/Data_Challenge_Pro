@@ -55,12 +55,21 @@ curl http://localhost:8000/api/v1/salud
 
 ### Cargar el histórico y entrenar (una sola vez)
 
-La base empieza vacía. Cargue el histórico desde la base del operador y entrene los modelos. Requiere Python local con `.env` apuntando a `localhost:5433` y el usuario dueño:
+La base empieza vacía. Haga primero una copia local de la base del operador, cargue con ella el histórico y entrene los modelos. Requiere Python local con `.env` apuntando a `localhost:5433` y el usuario dueño:
 
 ```bash
-python -m frecuencias.ingesta.historico                  # histórico analítico desde la base del operador
+python -m frecuencias.ingesta.extraccion                 # copia de solo lectura de la base del operador en datos/
+python -m frecuencias.ingesta.historico                  # carga datos/ en el histórico analítico de ai_frecuencias
 python -m frecuencias.inferencia.entrenamiento --trials 15   # 3 horizontes; tomó 37 min en el equipo de desarrollo
 ```
+
+Sobre la carpeta `datos/`:
+
+- **Qué contiene.** La extracción deja allí unos 26 MB: viajes, calendario de estacionalidades y novedades, rutas, un archivo de conteos por mes (`conteo_mensual/`) y la demanda agregada por franja de 15 minutos (`demanda_15min.parquet`).
+- **Si se corta.** Al repetirla, la extracción solo consulta los meses que faltan.
+- **No va en git.** Es una copia de datos del operador y está en `.gitignore`. Para llevarla a otra máquina, copie la carpeta o repita la extracción.
+- **Entrenamiento.** Lee `datos/demanda_15min.parquet`. **Si el archivo no existe, entrena con datos sintéticos** (solo sirven para probar el flujo) y lo avisa en la consola. Verifique que la extracción terminó antes de entrenar.
+- **API.** Una vez cargado el histórico, trabaja con la base `ai_frecuencias`. Usa el calendario de `datos/` y, si no está, lo lee de la base del operador al arrancar.
 
 Los paquetes quedan en `modelos/paquetes/`, que se monta en la API, y en `model_registry`. Reinicie la API para cargarlos: `docker compose restart api`. Los modelos no se versionan en git, porque son artefactos generados con su propia huella. Para mover un despliegue a otra máquina, copie `modelos/` junto con un respaldo de la base.
 
