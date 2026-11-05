@@ -14,7 +14,7 @@ Prototipo para el reto de frecuencias de SOBUSA y Extreme Technologies. Predice 
 - **Pantalla «Hoy».** Muestra, para las tres rutas a la vez, qué hacer en la hora actual y la siguiente en lenguaje operativo («Agregar 2 buses entre 06:15 y 07:15»), la franja del día y las alertas pendientes. Las horas después de la última salida programada aparecen como fuera de servicio y no piden buses.
 - **Ciclo incremental.** Se ejecuta como trabajo con avance, latido, reanudación tras reinicios y reintentos. Monitorea deriva, error y cobertura, y reentrena con comparación campeón/retador.
 - **Calidad del software.**
-  - 299 pruebas, con 77 % de cobertura.
+  - 322 pruebas, con 79 % de cobertura sobre la base cargada.
   - SonarQube sin bugs, vulnerabilidades ni code smells.
   - p95 de las consultas paginadas de 146 ms con 10 usuarios concurrentes.
   - Ingesta de 808.345 registros en 149 s, sin duplicados al repetir.
@@ -45,7 +45,7 @@ docker compose --profile calidad up -d          # servidor SonarQube local
 conda create -n frecuencias python=3.12 && conda activate frecuencias
 pip install -r requirements-dev.txt
 docker compose up -d db && python -m alembic upgrade head
-python -m pytest                                  # 299 pruebas; -m "not lenta" para las rápidas
+python -m pytest                                  # 322 pruebas, con la base cargada; -m "not lenta" para las rápidas
 uvicorn frecuencias.api.main:app --reload
 python -m frecuencias.operacion.ciclo --origen base --dias 1
 ```

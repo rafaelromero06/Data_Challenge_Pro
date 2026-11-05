@@ -370,7 +370,7 @@ RNF-003 Ingesta & Upsert por lotes con \cod{COPY} a tabla temporal & 808.345 reg
 RNF-004 Asincronía & Ciclo como trabajo con etapa, avance y reintento (API y programador); exclusión entre procesos por índice único & \cod{humo\_docker.json}: 202 y 409 \\
 RNF-005 Escalabilidad & API sin estado de sesión; procesamiento por ruta y fecha & --- \\
 RNF-006 Observabilidad & Logs JSON con \cod{correlation\_id} y \cod{trace\_id}, Prometheus, trazas OpenTelemetry de HTTP, SQL y etapas & \cod{tests/test\_trazas.py} \\
-RNF-007 Mantenibilidad & Arquitectura modular, 299 pruebas, 77\,\% de cobertura & \cod{reporte-pruebas.xml} \\
+RNF-007 Mantenibilidad & Arquitectura modular, 322 pruebas, 79\,\% de cobertura & \cod{reporte-pruebas.xml} \\
 RNF-008 Portabilidad & Docker Compose con base, migraciones, API y perfiles & \cod{humo\_docker.json} \\
 RNF-009 Compatibilidad & \cod{/api/v1}, OpenAPI 3.1, 9 migraciones reversibles probadas en CI & \cod{docs/openapi.json} \\
 RNF-010 Resiliencia & Timeout, reintento con espera creciente y circuit breaker en fuente y notificaciones & \cod{tests/test\_resiliencia.py} \\

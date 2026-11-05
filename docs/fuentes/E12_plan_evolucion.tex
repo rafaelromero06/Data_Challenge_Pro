@@ -39,7 +39,7 @@ El prototipo funciona de punta a punta con tres rutas (SILENCIO, CRA 54 y CL 72)
   \item Monitorea su propio desempeño y reentrena de forma controlada.
 \end{itemize}
 
-Corre en Docker Compose con 299 pruebas automáticas y un análisis de SonarQube sin hallazgos. Lo que falta para operar no es software sino tres cosas:
+Corre en Docker Compose con 322 pruebas automáticas y un análisis de SonarQube sin hallazgos. Lo que falta para operar no es software sino tres cosas:
 
 \begin{itemize}
   \setlength{\itemsep}{0.1em}
@@ -173,7 +173,7 @@ Carga sobre la base operacional & Réplica de lectura, consultas por rango index
 Recomendación inviable & Restricciones duras de flota, headway y capacidad; la recomendación se marca \emph{no viable} con el motivo. \\
 Caídas y reinicios & Trabajos con latido, reanudación automática y reintentos, verificados con una caída real de la API. \\
 Exposición de datos & Mínimo privilegio en las dos bases, sin datos personales de conductores, claves con huella, secretos fuera del repositorio. \\
-Dependencia del equipo actual & Manuales técnico, de usuario y de despliegue; 299 pruebas; integración continua con SonarQube; explicación de cada archivo en \cod{comentarios\_codigo.pdf}. \\
+Dependencia del equipo actual & Manuales técnico, de usuario y de despliegue; 322 pruebas; integración continua con SonarQube; explicación de cada archivo en \cod{comentarios\_codigo.pdf}. \\
 Compatibilidad de librerías & Versiones fijadas en \cod{requirements.txt}; la instrumentación de trazas sobre SQLAlchemy 2.1 está cubierta por pruebas. \\
 \bottomrule
 \end{longtable}

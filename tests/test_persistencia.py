@@ -158,6 +158,6 @@ def test_recomendacion_vigente_por_hora_es_la_mas_reciente(conn):
     recomendaciones.guardar(conn, [{**base, "buses_por_hora": 8}])
     recomendaciones.guardar(conn, [{**base, "buses_por_hora": 9,
                                     "generada_en": datetime.now(timezone.utc) + timedelta(seconds=1)}])
-    vigentes = [r for r in recomendaciones.vigentes_por_hora(conn, REFERENCIA, REFERENCIA + timedelta(hours=2))
+    vigentes = [r for r in recomendaciones.vigentes_por_hora(conn, REFERENCIA, REFERENCIA + timedelta(hours=1))
                 if r["id_ruta"] == 16]
     assert [r["buses_por_hora"] for r in vigentes] == [9]

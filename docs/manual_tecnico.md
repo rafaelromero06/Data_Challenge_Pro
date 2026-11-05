@@ -54,7 +54,7 @@ flowchart LR
 | `frecuencias/observabilidad.py`, `trazas.py`, `resiliencia.py`, `seguridad.py` | Logs JSON, métricas Prometheus, trazas OpenTelemetry, circuit breaker, claves de acceso |
 | `migrations/` | Alembic: 9 migraciones del esquema `ai_frecuencias` |
 | `pruebas/` | Pruebas de carga, volumen, EXPLAIN, humo en Docker, E2E del tablero e informe de SonarQube |
-| `tests/` | 299 pruebas pytest (unitarias, integración con la base, API, ML, contrato) |
+| `tests/` | 322 pruebas pytest (unitarias, integración con la base, API, ML, contrato) |
 
 ## 2. El ciclo incremental
 
@@ -203,7 +203,7 @@ Valores del último ciclo real con datos hasta diciembre de 2025:
 
 | Nivel | Dónde | Cómo correr |
 |---|---|---|
-| Unitarias, integración, API, ML y contrato | `tests/` (299 pruebas, 77 % de cobertura) | `python -m pytest` (con la base levantada); `-m "not lenta"` omite las que cargan datos y modelos reales |
+| Unitarias, integración, API, ML y contrato | `tests/` (322 pruebas, 79 % de cobertura) | `python -m pytest` (con la base cargada); `-m "not lenta"` omite las que cargan datos y modelos reales |
 | Carga (RNF-002) | `pruebas/carga_api.py` | Con la API levantada |
 | Volumen (RNF-003) | `pruebas/volumen_ingesta.py` | Base temporal en Docker |
 | Rendimiento SQL | `pruebas/explain_fuente.py` | Contra la base del operador, solo lectura |
