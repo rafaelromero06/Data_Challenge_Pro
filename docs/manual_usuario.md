@@ -6,7 +6,7 @@ El tablero se abre en `http://<servidor>:8000/`, funciona en computador y en cel
 
 ## 1. Entrar
 
-1. Abra el tablero. Arriba ve el estado del servicio, la fecha del último dato recibido, los modelos en uso y si hay un ciclo en curso.
+1. Abra el tablero. Arriba ve el estado del servicio, la fecha del último dato recibido, los modelos en uso y si hay un ciclo en curso. Si el servicio dice *sin preparar*, faltan datos o modelos: un aviso explica qué hacer y debe resolverlo el administrador.
 2. Escriba la **clave de acceso** que le entregó el administrador y pulse **Usar**. El texto *Clave aceptada* confirma que sirve. La clave se guarda solo en este navegador.
 
 | Rol de la clave | Qué puede hacer |
@@ -87,6 +87,8 @@ Cómo leer el resultado:
     - *Servicio mínimo*: el headway máximo permitido.
     - *Capacidad crítica*: no se puede bajar sin pasar del 90 % de ocupación.
     - *Headway mínimo* o *flota disponible*: tope operativo.
+  - **Pasajeros en riesgo de no abordar**: los que quedarían sobre la capacidad en el tramo más cargado, con la recomendación y con la oferta actual.
+  - **Recaudo esperado**: pasajeros por tarifa. Muestra *falta definir la tarifa* hasta que el administrador publique el parámetro `tarifa_pasajero`.
   - **Costo ponderado** y sus **componentes**, para entender la decisión, y la **línea base** de las fórmulas de referencia para comparar.
   - **Tramo más cargado**: el segmento de la ruta con mayor carga a esa hora.
   - La etiqueta **no viable** indica que la demanda no se puede atender con las restricciones configuradas; la tarjeta explica por qué.

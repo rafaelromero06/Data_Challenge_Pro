@@ -111,6 +111,7 @@ def _pasos(url: str, clave: str, salida: Path, ruta: int, informe: dict) -> None
             "tramo_critico": pagina.locator("#pred-recomendaciones .nota").count(),
             "funcion_objetivo": pagina.locator("#pred-recomendaciones .tarjeta",
                                                has_text="Costo ponderado (función objetivo)").count(),
+            "recaudo": pagina.locator("#pred-recomendaciones .tarjeta", has_text="Pasajeros en riesgo de no abordar").count(),
         }
         pagina.screenshot(path=str(salida / "1-prediccion.png"), full_page=True)
 

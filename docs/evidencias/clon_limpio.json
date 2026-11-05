@@ -1,0 +1,63 @@
+{
+ "fecha": "2026-11-04",
+ "metodo": "Copia de los archivos versionados, sin datos ni modelos, en un proyecto de Docker Compose aislado",
+ "pasos": {
+  "levantar": {
+   "comando": "docker compose up -d --build",
+   "api": "healthy",
+   "estado_salud": "sin_preparar",
+   "tablero_http": 200,
+   "aviso_en_edge": true
+  },
+  "importar_paquete": {
+   "comando": "python pruebas/paquete_demo.py importar",
+   "franjas": 240691,
+   "modelos_activos": 3,
+   "estado_salud": "ok"
+  },
+  "seguro_contra_sobrescritura": {
+   "segundo_intento": "rechazado",
+   "codigo_salida": 1
+  },
+  "prediccion": {
+   "ruta": 16,
+   "referencia": "2025-12-18T07:00:00-05:00",
+   "buses_por_hora": 18,
+   "headway_min": 3.33,
+   "viable": true
+  },
+  "recaudo": {
+   "sin_tarifa": {
+    "pasajeros_esperados": 1560.94,
+    "recaudo_esperado": null
+   },
+   "tarifa_de_prueba": 3000,
+   "recaudo_esperado": 4682820,
+   "recaudo_en_riesgo_actual": 1080,
+   "recaudo_en_riesgo_recomendado": 0
+  },
+  "tablero_e2e": {
+   "navegador": "Microsoft Edge",
+   "aprobado": true,
+   "contraste_minimo": 5.69,
+   "errores_consola": 0
+  },
+  "ciclo_completo": {
+   "comando": "python pruebas/demo_ciclo.py --dias 3",
+   "estado": "exitosa",
+   "segundos": 2044,
+   "ultimo_dato_antes": "2025-12-18T23:45:00-05:00",
+   "ultimo_dato_despues": "2025-12-21T23:30:00-05:00"
+  },
+  "recarga_por_rango": {
+   "comando": "python -m frecuencias.ingesta.historico --desde 2025-12-20 --hasta 2025-12-21",
+   "franjas_antes": 241394,
+   "franjas_despues": 241394,
+   "subidas_antes": 43481416,
+   "subidas_despues": 43481416,
+   "viajes_antes": 560527,
+   "viajes_despues": 560527,
+   "marca_de_agua_movida": false
+  }
+ }
+}

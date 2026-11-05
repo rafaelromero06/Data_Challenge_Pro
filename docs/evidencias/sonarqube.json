@@ -1,8 +1,30 @@
 {
  "puerta_de_calidad": "OK",
- "condiciones": [],
+ "condiciones": [
+  {
+   "metricKey": "new_coverage",
+   "status": "OK",
+   "actualValue": "97.1",
+   "errorThreshold": "80",
+   "comparator": "LT"
+  },
+  {
+   "metricKey": "new_duplicated_lines_density",
+   "status": "OK",
+   "actualValue": "0.0",
+   "errorThreshold": "3",
+   "comparator": "GT"
+  },
+  {
+   "metricKey": "new_violations",
+   "status": "OK",
+   "actualValue": "0",
+   "errorThreshold": "0",
+   "comparator": "GT"
+  }
+ ],
  "medidas": {
-  "coverage": "78.5",
+  "coverage": "80.4",
   "reliability_rating": "1.0",
   "code_smells": "0",
   "duplicated_lines_density": "0.3",
@@ -12,7 +34,7 @@
   "sqale_rating": "1.0",
   "bugs": "0",
   "software_quality_low_issues": "0",
-  "ncloc": "7634",
+  "ncloc": "8078",
   "software_quality_blocker_issues": "0",
   "vulnerabilities": "0",
   "software_quality_medium_issues": "0"

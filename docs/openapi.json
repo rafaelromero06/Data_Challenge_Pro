@@ -2546,13 +2546,13 @@
       "type": "string",
       "format": "date-time",
       "title": "Referencetime",
-      "description": "Ultima franja de 15 min cuyo dato se da por conocido (hora local)"
+      "description": "Ultima franja de 15 min cuyo dato se da por conocido"
      },
      "targetSlot": {
       "type": "string",
       "format": "date-time",
       "title": "Targetslot",
-      "description": "Inicio de la franja de 15 min que se predice (hora local)"
+      "description": "Inicio de la franja de 15 min que se predice"
      },
      "horizonMinutes": {
       "type": "integer",

@@ -146,10 +146,14 @@ function iniciarPestanas() {
 async function cargarSalud() {
   try {
     const s = await api("/salud");
-    $("salud-estado").textContent = s.base_ai_frecuencias.estado === "ok" ? "en línea" : `en línea (base ${s.base_ai_frecuencias.estado})`;
+    const sinPreparar = s.estado === "sin_preparar";
+    $("salud-estado").textContent = sinPreparar ? "sin preparar"
+      : s.base_ai_frecuencias.estado === "ok" ? "en línea" : `en línea (base ${s.base_ai_frecuencias.estado})`;
     $("salud-dato").textContent = fecha(s.ultima_franja_con_datos);
-    $("salud-modelos").textContent = s.horizontes_min.map((h) => `${h} min`).join(" · ");
+    $("salud-modelos").textContent = s.horizontes_min.map((h) => `${h} min`).join(" · ") || "–";
     $("salud-ciclo").textContent = s.ciclo_en_curso ? "en curso" : "inactivo";
+    $("aviso-preparacion").textContent = sinPreparar ? `${s.motivo} ${s.instrucciones}` : "";
+    $("aviso-preparacion").hidden = !sinPreparar;
   } catch (error) {
     $("salud-estado").textContent = "sin conexión";
   }
@@ -212,6 +216,15 @@ function objetivo(r) {
     <dt>Línea base (§10.3)</dt><dd>${r.linea_base ? r.linea_base.buses_por_hora : "–"} buses por hora</dd>`;
 }
 
+function recaudo(r) {
+  const v = r.recaudo;
+  if (!v) return "";
+  const actual = v.pasajeros_en_riesgo_actual === null ? "" : ` (con la oferta actual, ${numero(v.pasajeros_en_riesgo_actual, 0)})`;
+  const esperado = v.recaudo_esperado === null ? "falta definir la tarifa" : `$ ${numero(v.recaudo_esperado, 0)}`;
+  return `<dt>Pasajeros en riesgo de no abordar</dt><dd>${numero(v.pasajeros_en_riesgo, 0)}${actual}</dd>
+    <dt>Recaudo esperado</dt><dd>${esperado}</dd>`;
+}
+
 function tarjetaRecomendacion(r) {
   const alertas = r.alertas.length
     ? `<ul>${r.alertas.map((a) => `<li>${etiqueta(a.severidad)} ${escapar(a.codigo)}: ${escapar(a.explicacion)}</li>`).join("")}</ul>` : "";
@@ -226,6 +239,7 @@ function tarjetaRecomendacion(r) {
       <dt>Ocupación esperada</dt><dd>${porcentaje(r.ocupacion_esperada)}</dd>
       <dt>Ocupación con oferta actual</dt><dd>${porcentaje(r.ocupacion_actual)}</dd>
       <dt>Limitado por</dt><dd>${escapar(NOMBRES_LIMITE[r.limitado_por] ?? r.limitado_por)}</dd>
+      ${recaudo(r)}
       ${objetivo(r)}
     </dl>
     ${r.motivo_no_viable ? `<p class="motivo">${escapar(r.motivo_no_viable)}</p>` : ""}${tramoCritico(r.tramo_critico)}${alertas}

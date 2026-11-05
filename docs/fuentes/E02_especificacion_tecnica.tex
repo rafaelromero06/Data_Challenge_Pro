@@ -26,7 +26,7 @@
 \title{\textbf{E02 · Especificación técnica}\\[0.3em]
 \large Frecuencias inteligentes SOBUSA: arquitectura, datos, API y decisiones técnicas}
 \author{Roger Daza \quad Matteo Del Sole \quad Rafael Romero\\[0.2em]\small Universidad del Norte · Reto Extreme Technologies -- SOBUSA}
-\date{Versión del 29 de octubre de 2026 · esquema \cod{ai\_frecuencias} en la revisión 0009}
+\date{Versión del 4 de noviembre de 2026 · esquema \cod{ai\_frecuencias} en la revisión 0011}
 
 \begin{document}
 \maketitle
@@ -65,7 +65,7 @@ Este documento resume el diseño. El detalle operativo está en el repositorio: 
   \setlength{\itemsep}{0.1em}
   \item \textbf{Separación de responsabilidades.} Cada paquete Python atiende una capa (Tabla~\ref{tab:componentes}). La API y el programador usan los mismos servicios de dominio.
   \item \textbf{No interferencia.} La base del operador se lee con un usuario de solo lectura, transacciones \cod{READ ONLY} y \cod{statement\_timeout} de 5 minutos. Nunca se ejecuta DDL ni DML sobre ella.
-  \item \textbf{Mínimo privilegio en la base propia.} La aplicación escribe con un usuario que no puede borrar, truncar ni alterar tablas. Solo las migraciones usan al dueño del esquema.
+  \item \textbf{Mínimo privilegio en la base propia.} La aplicación escribe con un usuario que no puede truncar ni alterar tablas, ni borrar historia; solo puede reemplazar el perfil derivado \cod{segment\_profile}. Solo las migraciones usan al dueño del esquema.
   \item \textbf{Procesos largos como trabajos.} La ingesta, la predicción por lotes y el reentrenamiento corren fuera de las peticiones HTTP, con estado, avance, latido, recuperación y reintento.
   \item \textbf{Configuración externa.} Todo parámetro de entorno va en variables. Todo umbral de negocio va versionado en PostgreSQL. No hay secretos en el repositorio.
   \item \textbf{Trazabilidad.} Cada predicción, recomendación y alerta apunta a la ejecución, el modelo, las variables y la regla que la produjeron.
@@ -370,9 +370,9 @@ RNF-003 Ingesta & Upsert por lotes con \cod{COPY} a tabla temporal & 808.345 reg
 RNF-004 Asincronía & Ciclo como trabajo con etapa, avance y reintento (API y programador); exclusión entre procesos por índice único & \cod{humo\_docker.json}: 202 y 409 \\
 RNF-005 Escalabilidad & API sin estado de sesión; procesamiento por ruta y fecha & --- \\
 RNF-006 Observabilidad & Logs JSON con \cod{correlation\_id} y \cod{trace\_id}, Prometheus, trazas OpenTelemetry de HTTP, SQL y etapas & \cod{tests/test\_trazas.py} \\
-RNF-007 Mantenibilidad & Arquitectura modular, 322 pruebas, 79\,\% de cobertura & \cod{reporte-pruebas.xml} \\
+RNF-007 Mantenibilidad & Arquitectura modular, 411 pruebas, 80\,\% de cobertura & \cod{docs/evidencias/} \cod{reporte-pruebas.xml} \\
 RNF-008 Portabilidad & Docker Compose con base, migraciones, API y perfiles & \cod{humo\_docker.json} \\
-RNF-009 Compatibilidad & \cod{/api/v1}, OpenAPI 3.1, 9 migraciones reversibles probadas en CI & \cod{docs/openapi.json} \\
+RNF-009 Compatibilidad & \cod{/api/v1}, OpenAPI 3.1, 11 migraciones reversibles probadas en CI & \cod{docs/openapi.json} \\
 RNF-010 Resiliencia & Timeout, reintento con espera creciente y circuit breaker en fuente y notificaciones & \cod{tests/test\_resiliencia.py} \\
 RNF-011 Trazabilidad IA & Ejecución, modelo, variables, regla y parámetros enlazados en cada salida & Esquema E07 \\
 RNF-012 Accesibilidad & Navegación por teclado, contraste $\ge$ 5,7:1, modo oscuro y móvil & \cod{e2e\_tablero.json} \\
@@ -400,7 +400,11 @@ Búsqueda exacta para la frecuencia & OR-Tools, SciPy MILP, PuLP & Dominio de a 
 ALT-006 por hora con despachos fallidos & Huecos entre salidas & \cod{fechasalida} es la hora programada; contar cancelados, sin iniciar y fuera de plazo (marca del operador) mide la falla real y da unas 4 alertas al día \\
 Índice único parcial para un ciclo a la vez & Candado en memoria, \cod{pg\_advisory\_lock} & Funciona entre procesos y máquinas, sobrevive a reinicios y es visible en la tabla \\
 Latido por instancia & Solo tiempo de inicio & Distingue un ciclo largo (reentrenamiento) de uno abandonado \\
-Usuario de aplicación sin DELETE ni DDL & Usuario dueño & Mínimo privilegio; la historia no se puede borrar desde la aplicación \\
+Usuario de aplicación sin DDL y con DELETE solo en \cod{segment\_profile} & Usuario dueño & Mínimo privilegio; la historia no se puede borrar y el perfil es un resumen derivado que cada ciclo reemplaza \\
+API que arranca sin modelos y lo informa & Detener el arranque & Un clon limpio no trae datos ni modelos: \cod{/salud} explica qué falta y nunca se presentan datos sintéticos como reales \\
+Modelos y datos en un paquete privado & Publicarlos en el repositorio & Son datos del operador y artefactos con huella; el paquete reproduce la demostración sin acceso a su base \\
+Sin columna de sentido & Inventar una regla de ida y vuelta & La guía no la define y las tres rutas son circuitos cerrados: el número de segmento ya ordena el recorrido \\
+Demanda por segmento como reparto & Un modelo por segmento & Las observaciones por segmento cubren desde noviembre de 2025; alcanzan para repartir con cuotas, no para entrenar \\
 Verificador SCRAM generado en cliente & \cod{ALTER ROLE ... PASSWORD} en claro & La clave no viaja ni queda en logs del servidor \\
 Modelos fuera de git & Versionarlos en el repositorio & Son artefactos con huella registrada; git alteraba sus fines de línea \\
 SonarQube como servicio del job de CI & Servidor externo con secretos & Reproducible y sin credenciales externas \\
@@ -413,10 +417,12 @@ Instrumentación SQLAlchemy con \cod{skip\_dep\_check} & Fijar SQLAlchemy 2.0 & 
 \begin{itemize}
   \setlength{\itemsep}{0.1em}
   \item \textbf{Parámetros operativos sin validar.} Capacidad (50 pasajeros), headway máximo (10 min de día) y pesos de la función objetivo. En 7--20\,\% de los viajes la carga medida supera 50 pasajeros. Mitigación: son parámetros versionados en la base y se ajustan sin desarrollo.
-  \item \textbf{Fuente.} Si el operador corrige lecturas pasadas, el ciclo no las relee. Mitigación: recarga idempotente del histórico. Pendiente: recarga por rango.
+  \item \textbf{Fuente.} Si el operador corrige lecturas pasadas, el ciclo no las relee. Mitigación: recarga idempotente por rango (\cod{-{}-desde}, \cod{-{}-hasta}, \cod{-{}-origen base}). Pendiente: que el operador indique qué periodos cambiaron.
+  \item \textbf{Demanda por segmento.} Es un reparto orientativo: WAPE de 44\,\% por segmento y hora en diciembre de 2025, con sesgo de +0,7\,\% al descontar la cobertura de 92,8\,\% de las observaciones.
+  \item \textbf{Recaudo.} Se estiman pasajeros esperados y en riesgo de no abordar. Falta la tarifa del operador (\cod{tarifa\_pasajero}) para expresarlos en pesos.
   \item \textbf{Notificaciones simuladas} hasta recibir credenciales de SMTP y WhatsApp.
   \item \textbf{Una instancia de API por host,} supuesto de la recuperación al arrancar. Para varias réplicas, la recuperación queda solo por latido.
-  \item \textbf{Video de demostración (E11) y plan de evolución (E12)} a cargo del equipo.
+  \item \textbf{Video de demostración (E11)} a cargo del equipo, con el guion de \cod{docs/guion\_demo.md}.
 \end{itemize}
 
 \end{document}

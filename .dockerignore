@@ -11,6 +11,7 @@
 *.pdf
 datos
 modelos
+paquete_demo
 Dockerfile
 docker-compose.yml
 .dockerignore

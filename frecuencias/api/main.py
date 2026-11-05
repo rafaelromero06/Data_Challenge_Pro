@@ -25,9 +25,9 @@ from frecuencias.analitica.carga import cargar_calendario, cargar_datos
 from frecuencias.analitica.serie import preparar_serie
 from frecuencias.api import esquemas as esq
 from frecuencias.api.errores import registrar_manejadores
-from frecuencias.config import CARPETA_DATOS, FEATURE_VERSION, NOMBRES_RUTAS, PASO_MIN, ZONA_HORARIA
+from frecuencias.config import ARCHIVO_DEMANDA, CARPETA_DATOS, FEATURE_VERSION, NOMBRES_RUTAS, PASO_MIN, ZONA_HORARIA
 from frecuencias.inferencia import artefactos
-from frecuencias.inferencia.modelos import cargar_modelos, desde_registro
+from frecuencias.inferencia.modelos import SinModelos, cargar_modelos, desde_registro
 from frecuencias.inferencia.prediccion import Predictor
 from frecuencias.ingesta import historico
 from frecuencias.observabilidad import MiddlewareCorrelacion, configurar_logs, describir_error, log
@@ -51,10 +51,16 @@ TIPOS_EXPORTACION = {
 ENTORNO = os.environ.get("ENTORNO", "desarrollo").lower()
 DOCUMENTACION = ENTORNO != "produccion" or os.environ.get("API_DOCS", "").lower() == "activa"
 REANUDAR_CICLOS = os.environ.get("CICLO_REANUDAR", "activa").lower() != "desactivada"
+INSTRUCCIONES_PREPARACION = ("Importe el paquete de demostracion (python pruebas/paquete_demo.py importar) o cargue "
+                             "datos y modelos segun el manual de despliegue, seccion 3; luego reinicie la API.")
 
 estado: dict = {}
 CANDADO = threading.Lock()
 CICLO = threading.Lock()
+
+
+class SinHistorico(RuntimeError):
+    pass
 
 
 def _leer_historia(motor) -> tuple[pd.DataFrame, pd.DataFrame | None, str]:
@@ -67,6 +73,8 @@ def _leer_historia(motor) -> tuple[pd.DataFrame, pd.DataFrame | None, str]:
                     return demanda, historico.leer_viajes(conn, desde=desde), "ai_frecuencias.demand_history"
         except SQLAlchemyError as error:
             log("api").warning("historico_no_disponible", error=type(error).__name__)
+    if not ARCHIVO_DEMANDA.exists():
+        raise SinHistorico(f"No hay historico en ai_frecuencias ni en datos/{ARCHIVO_DEMANDA.name}.")
     demanda = cargar_datos()
     archivo = CARPETA_DATOS / "viajes.parquet"
     if not archivo.exists():
@@ -89,9 +97,18 @@ def _cargar_estado(motor) -> None:
     with CANDADO:
         estado.update(serie=serie, viajes=viajes, calendario=calendario, predictor=predictor, nombres=nombres,
                       fuente=fuente, cargado_en=ahora_utc())
+        estado.pop("sin_preparar", None)
     obs = serie[serie["observado"]]
     log("api").info("estado_cargado", fuente=fuente, franjas_con_servicio=len(obs), ultima_franja=str(obs["ts"].max()),
                     horizontes=predictor.horizontes)
+
+
+def _preparar(motor) -> None:
+    try:
+        _cargar_estado(motor)
+    except (SinHistorico, SinModelos) as error:
+        estado["sin_preparar"] = str(error)
+        log("api").warning("api_sin_preparar", motivo=str(error))
 
 
 def _reanudar(motor, recuperadas: list[dict]) -> None:
@@ -113,7 +130,7 @@ def _reanudar(motor, recuperadas: list[dict]) -> None:
 async def lifespan(app: FastAPI):
     configurar_logs()
     estado["motor_ia"] = db.motor_destino() if db.url_destino() else None
-    _cargar_estado(estado["motor_ia"])
+    _preparar(estado["motor_ia"])
     if estado["motor_ia"] is not None:
         _reanudar(estado["motor_ia"], trabajos.iniciar_proceso(estado["motor_ia"], "api"))
     yield
@@ -188,6 +205,9 @@ def _usuario(quien: dict, declarado: str | None) -> str:
 
 def _vista() -> dict:
     with CANDADO:
+        if "serie" not in estado:
+            raise HTTPException(503, f"{estado.get('sin_preparar', 'La API aun no cargo datos y modelos.')} "
+                                     f"{INSTRUCCIONES_PREPARACION}")
         return {k: estado[k] for k in ("serie", "viajes", "calendario", "predictor", "nombres")}
 
 
@@ -201,7 +221,7 @@ def _limpio(valor):
     if isinstance(valor, float) and np.isnan(valor):
         return None
     if isinstance(valor, pd.Timestamp):
-        return valor.isoformat()
+        return a_zona(valor).isoformat()
     return valor
 
 
@@ -316,7 +336,7 @@ def _correr(peticion: esq.PeticionPrediccion, request: Request, quien: dict) -> 
         for franja in pd.date_range(rec["franja_inicio"], rec["franja_fin"], freq=f"{PASO_MIN}min", inclusive="left"):
             por_franja[franja] = _resumida(rec)
     return {
-        "routeId": peticion.id_ruta, "routeName": vista["nombres"].get(peticion.id_ruta), "referenceTime": ref,
+        "routeId": peticion.id_ruta, "routeName": vista["nombres"].get(peticion.id_ruta), "referenceTime": a_zona(ref),
         "executionId": id_ejecucion, "saved": peticion.guardar,
         "predictions": [_respuesta_prediccion(p, peticion.id_ruta, ref, generado, observado, por_franja)
                         for p in predichas],
@@ -382,6 +402,11 @@ def metricas_prometheus():
 
 @router.get("/salud")
 def salud():
+    comunes = {"ciclo_en_curso": CICLO.locked(), "base_ai_frecuencias": _estado_base_ia()}
+    if "sin_preparar" in estado:
+        return {"estado": "sin_preparar", "motivo": estado["sin_preparar"], "instrucciones": INSTRUCCIONES_PREPARACION,
+                "horizontes_min": [], "modelos": {}, "fuente_datos": None, "datos_cargados_en": None,
+                "ultima_franja_con_datos": None, **comunes}
     vista = _vista()
     obs = vista["serie"][vista["serie"]["observado"]]
     return {
@@ -390,9 +415,8 @@ def salud():
         "modelos": {h: f"{p.meta['model_id']}@{p.meta['version']}" for h, p in vista["predictor"].paquetes.items()},
         "fuente_datos": estado["fuente"],
         "datos_cargados_en": estado["cargado_en"],
-        "ultima_franja_con_datos": obs["ts"].max(),
-        "ciclo_en_curso": CICLO.locked(),
-        "base_ai_frecuencias": _estado_base_ia(),
+        "ultima_franja_con_datos": a_zona(obs["ts"].max()),
+        **comunes,
     }
 
 

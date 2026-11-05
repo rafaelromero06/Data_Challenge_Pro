@@ -67,6 +67,7 @@ class ParametrosHora:
     peso_espera: float = 0.1
     peso_sobreocupacion: float = 1.0
     peso_desviacion: float = 0.5
+    tarifa: float | None = None
 
     def como_dict(self) -> dict:
         return asdict(self)
@@ -111,4 +112,5 @@ def parametros_hora(valores: dict, hora: int, tipo_dia: int) -> ParametrosHora:
         peso_espera=_valor(valores, "peso_tiempo_espera"),
         peso_sobreocupacion=_valor(valores, "peso_sobreocupacion"),
         peso_desviacion=_valor(valores, "peso_desviacion_frecuencia"),
+        tarifa=_valor(valores, "tarifa_pasajero"),
     )

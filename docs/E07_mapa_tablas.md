@@ -7,10 +7,10 @@ Este documento describe cómo la solución lee la base del operador sin interven
 | Base | Para qué | Usuario | Permisos | Cómo se garantiza |
 |---|---|---|---|---|
 | Base del operador (PostgreSQL 14, esquema `public`) | Fuente de verdad: programación, conteos de pasajeros, rutas, segmentos, estacionalidades, novedades | Usuario técnico entregado por Extreme Technologies | Solo `SELECT` | Toda conexión abre con `default_transaction_read_only=on` y `statement_timeout=300000` (5 min); ver `frecuencias/db.py::motor_fuente` |
-| Base `ai_frecuencias` (PostgreSQL 14 + PostGIS, Docker) | Resultados de IA, histórico analítico, auditoría | `frecuencias_app`, miembro del rol `ai_frecuencias_app` | `SELECT`, `INSERT`, `UPDATE` sobre el esquema `ai_frecuencias`; sin `DELETE`, `TRUNCATE` ni DDL | Migración `0009_rol_aplicacion` y `python -m frecuencias.persistencia.roles` |
+| Base `ai_frecuencias` (PostgreSQL 14 + PostGIS, Docker) | Resultados de IA, histórico analítico, auditoría | `frecuencias_app`, miembro del rol `ai_frecuencias_app` | `SELECT`, `INSERT`, `UPDATE` sobre el esquema `ai_frecuencias`; `DELETE` solo en `segment_profile`; sin `TRUNCATE` ni DDL | Migraciones `0009_rol_aplicacion` y `0010_permiso_perfil_segmentos`, y `python -m frecuencias.persistencia.roles` |
 | Base `ai_frecuencias` (migraciones) | Crear y versionar el esquema con Alembic | Dueño del esquema (`AI_DB_USER`) | DDL | Solo lo usa el servicio `migraciones` de Docker Compose |
 
-El usuario de la aplicación no puede borrar historia: las alertas se cierran o descartan, los modelos se retiran y los paquetes viejos se archivan, nunca se eliminan. Las pruebas `tests/test_roles.py` verifican cada permiso contra la base real: lectura, inserción y actualización permitidas; `DELETE`, `TRUNCATE`, `CREATE TABLE`, `ALTER TABLE` y cambiar la versión del esquema, denegados.
+El usuario de la aplicación no puede borrar historia: las alertas se cierran o descartan, los modelos se retiran y los paquetes viejos se archivan, nunca se eliminan. La única excepción es `segment_profile`, un resumen derivado que cada ciclo reemplaza con la ventana móvil de observaciones. Las pruebas `tests/test_roles.py` verifican cada permiso contra la base real: lectura, inserción y actualización permitidas; `DELETE` fuera de `segment_profile`, `TRUNCATE`, `CREATE TABLE`, `ALTER TABLE` y cambiar la versión del esquema, denegados.
 
 Con esto se cumplen los controles de no interferencia de §11.3: usuario técnico de solo lectura, usuario separado que solo escribe en `ai_frecuencias`, transacciones `READ ONLY` con timeout, sin DDL sobre el esquema operacional y sin tocar triggers, funciones ni scripts.
 
@@ -34,7 +34,13 @@ La especificación propone `timbradas_consolidado` y `timbradas_segmentos_consol
 
 Los scripts de segmentación del operador no se pueden ejecutar en un acceso de solo lectura, porque escriben en `timbradas_segmentos`. Su lógica se reprodujo en `frecuencias/segmentos/carga.py`, que escribe en `ai_frecuencias.segment_observation`. Coincide en 99,7 % con la salida del operador en los viajes que ambos cubren.
 
-Esta decisión debe validarse con Extreme Technologies. Si los consolidados se completan, basta con cambiar las consultas de `consultas.py`: el resto del flujo no depende de la tabla de origen.
+Esta decisión debe validarse con Extreme Technologies (ver [validaciones pendientes](validaciones_pendientes.md)). Si los consolidados se completan, basta con cambiar las consultas de `consultas.py`: el resto del flujo no depende de la tabla de origen.
+
+### Campos de la especificación que no se usan
+
+- **Sentido.** Ni el conjunto mínimo (§6.1) ni el esquema lógico (§8.2) definen una columna de sentido. Las tres rutas son circuitos cerrados: el inicio del primer segmento y el fin del último quedan a menos de 60 m, con recorridos de 61 a 67 km. Por eso `nro_segmento` ya ordena el itinerario completo. Las columnas `sentido` de `prediction`, `recommendation` y `alert` quedan reservadas y vacías hasta que el operador defina cómo separar ida y vuelta.
+- **Zona tarifaria.** Solo existe en las tablas `timbradas_*_zonas`, que dependen de los consolidados descartados arriba.
+- **`frecuenciadespachos`, `cap_min_autorizada` y `cap_max_autorizada`.** La frecuencia vigente se mide con los despachos reales de `progvehiculos` (`optimizacion/oferta.py`) y la capacidad es un parámetro versionado por ruta. Ambas deben contrastarse con los valores configurados por el operador.
 
 ## 3. Marca de agua y lectura incremental
 
@@ -58,11 +64,11 @@ sequenceDiagram
 - **Ventana pendiente (RNF-001).** Si un ciclo cae después de la ingesta y antes de predecir, la marca de agua del ciclo (`execution_log.marca_agua_hasta` del último ciclo exitoso) queda atrás. El siguiente ciclo, o el reintento, procesa desde esa marca, con un tope de 7 días, aunque no lleguen datos nuevos. Así no se pierden lotes, predicciones ni alertas tras un reinicio. Se verificó con un ciclo real que falló en la etapa de monitoreo y se reintentó. También se mató la API con `docker kill` a mitad de un ciclo: al volver lo marcó `interrumpida` y lo reanudó sola como intento 2, que terminó bien (`docs/evidencias/caida_api.json`).
 - **Trazabilidad.** Cada lote queda en `execution_log` con ventana, registros leídos y rechazados, correlation id, propietario, intento y error. Los problemas de calidad quedan en `data_quality_issue` con regla, fila y causa.
 
-La especificación menciona `ultima_actualizacion` como marca de los consolidados. Como la fuente efectiva son los conteos crudos, que no tienen esa columna, la marca usada es la franja temporal de las lecturas. Si el operador corrige lecturas pasadas, el ciclo no las vuelve a leer. Para eso existe la recarga explícita del histórico (`python -m frecuencias.ingesta.historico --hasta AAAA-MM-DD`), que es idempotente porque hace upsert. Agregar un parámetro `--desde`, para recargar solo un rango, es una mejora pendiente del plan de evolución.
+La especificación menciona `ultima_actualizacion` como marca de los consolidados. Como la fuente efectiva son los conteos crudos, que no tienen esa columna, la marca usada es la franja temporal de las lecturas. Si el operador corrige lecturas pasadas, el ciclo no las vuelve a leer. Para eso existe la recarga por rango (`python -m frecuencias.ingesta.historico --desde AAAA-MM-DD --hasta AAAA-MM-DD --origen base`), que es idempotente porque hace upsert y no mueve la marca de agua del ciclo. Falta que el operador indique cómo detectar qué periodos cambiaron, porque los conteos crudos no tienen una marca de modificación.
 
 ## 4. Tablas propias (`ai_frecuencias`)
 
-Creadas y versionadas con Alembic (`migrations/versions/0001` a `0009`). Todas usan `TIMESTAMPTZ` en UTC; la API presenta las horas en `America/Bogota`.
+Creadas y versionadas con Alembic (`migrations/versions/0001` a `0011`). Todas usan `TIMESTAMPTZ` en UTC; la API presenta las horas en `America/Bogota`.
 
 | Tabla | Filas hoy | Contenido | Claves y restricciones relevantes |
 |---|---:|---|---|

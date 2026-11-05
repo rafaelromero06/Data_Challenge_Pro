@@ -52,9 +52,9 @@ flowchart LR
 | `frecuencias/api` | FastAPI, esquemas Pydantic, errores uniformes, autenticación por clave y rol |
 | `frecuencias/tablero` | Tablero web estático (HTML, CSS, JS sin dependencias) servido por la API. Su pantalla inicial, *Hoy*, la arma `operacion/resumen.py` a partir de las recomendaciones vigentes por hora. El *Mapa* usa Leaflet 1.9.4 (unpkg, con integridad SRI) y teselas de OpenStreetMap sobre el GeoJSON de `GET /segments/map` |
 | `frecuencias/observabilidad.py`, `trazas.py`, `resiliencia.py`, `seguridad.py` | Logs JSON, métricas Prometheus, trazas OpenTelemetry, circuit breaker, claves de acceso |
-| `migrations/` | Alembic: 9 migraciones del esquema `ai_frecuencias` |
-| `pruebas/` | Pruebas de carga, volumen, EXPLAIN, humo en Docker, E2E del tablero e informe de SonarQube |
-| `tests/` | 322 pruebas pytest (unitarias, integración con la base, API, ML, contrato) |
+| `migrations/` | Alembic: 11 migraciones del esquema `ai_frecuencias` |
+| `pruebas/` | Pruebas de carga, volumen, EXPLAIN, humo en Docker, E2E del tablero, informe de SonarQube, paquete y demostración del ciclo, sesgo por segmento e informe de modelos activos |
+| `tests/` | 411 pruebas pytest (unitarias, integración con la base, API, ML, contrato) |
 
 ## 2. El ciclo incremental
 
@@ -93,6 +93,7 @@ flowchart LR
   | 120 min | 10,8 % | 14,9 % | 18,4 % | 18,2 / 24,9 |
 
 - **Artefactos.** Cada paquete (`modelos/paquetes/<modelo>-<version>`) tiene modelo puntual, cuantiles, `meta.json` y `manifiesto.json` con SHA-256 de cada archivo. La API verifica la huella antes de cargar y rechaza paquetes alterados. `modelos/` está marcado como binario en `.gitattributes` para que git no cambie fines de línea.
+- **Demanda por segmento.** El modelo predice por ruta; `GET /predictions/{id}/segments` reparte esa predicción con la cuota histórica de subidas de cada segmento. En diciembre de 2025, con cuotas calculadas solo con noviembre, el WAPE por segmento y hora es de 44 %: sirve para ubicar el tramo cargado, no como pronóstico exacto de cada parada. El sesgo bruto de +8,5 % viene casi todo de la cobertura: las observaciones por segmento recogen el 92,8 % de las subidas de la ruta, y al descontarla queda en +0,7 % (`docs/evidencias/sesgo_segmentos.json`).
 - **Campeón/retador.** El candidato se entrena con los datos anteriores a una ventana de comparación que ninguno de los dos vio. Solo se activa si mejora el WAPE o la desviación de Poisson sin empeorar la otra y supera a la línea base. La decisión queda en `model_registry` y en el detalle del ciclo; el modelo anterior queda disponible para revertir (`POST /models/{id}/activate`).
 
 ## 4. Optimización de frecuencia (§10.2)
@@ -124,6 +125,7 @@ costo(b) = α · b · ciclo / 60                         (vehículo-horas de ope
   - **Horas fuera de la ventana.** Un bloque con menos de 25 % de su hora dentro de la ventana no se recomienda.
   - **Hora parcial.** En un bloque parcial, los buses operados se convierten en tasa por hora dentro del servicio: 3 salidas en 46 minutos equivalen a 3,9 buses por hora.
   - **Registro.** La recomendación guarda `fraccion_servicio` y `ventana_servicio`. *Hoy* marca como `fuera_de_servicio` las recomendaciones antiguas que caen fuera de la ventana.
+- **Recaudo.** `recommendation.parametros.recaudo` guarda los pasajeros esperados y los que quedarían sobre la capacidad en el tramo más cargado, con la frecuencia recomendada y con la actual. Con `tarifa_pasajero` definida los expresa en pesos; sin ella, esos campos quedan en `null`. No entra en la función objetivo: la referencia de §10.2 no lo incluye.
 - **Salida.** `recommendation.parametros.objetivo` guarda los componentes del costo, las tres mejores alternativas, la restricción que limita (`funcion_objetivo`, `servicio_minimo`, `capacidad_critica`, `headway_minimo`, `flota`), y la sensibilidad a cada peso multiplicado por 0,5 y por 2. `linea_base` guarda el resultado de las fórmulas de §10.3 para comparar.
 
 ## 5. Alertas
@@ -203,11 +205,14 @@ Valores del último ciclo real con datos hasta diciembre de 2025:
 
 | Nivel | Dónde | Cómo correr |
 |---|---|---|
-| Unitarias, integración, API, ML y contrato | `tests/` (322 pruebas, 79 % de cobertura) | `python -m pytest` (con la base cargada); `-m "not lenta"` omite las que cargan datos y modelos reales |
+| Unitarias, integración, API, ML y contrato | `tests/` (411 pruebas, 80 % de cobertura) | `python -m pytest` (con la base cargada); `-m "not lenta"` omite las que cargan datos y modelos reales |
+| Contrato de la API | `tests/test_contrato.py` | Corre en CI: compara la API con `docs/openapi.json`, los endpoints mínimos de §12.2 y el error uniforme de toda ruta protegida |
 | Carga (RNF-002) | `pruebas/carga_api.py` | Con la API levantada |
 | Volumen (RNF-003) | `pruebas/volumen_ingesta.py` | Base temporal en Docker |
 | Rendimiento SQL | `pruebas/explain_fuente.py` | Contra la base del operador, solo lectura |
 | Humo en Docker | `pruebas/humo_docker.py` | Con `docker compose up` |
+| Ciclo completo (§14.2) | `pruebas/demo_ciclo.py` | Con la API operando; datos nuevos desde `datos/` o desde la base del operador |
+| Sesgo por segmento (§9.3) | `pruebas/sesgo_segmentos.py` | Contra `ai_frecuencias`, con cuotas calculadas solo con datos previos a la ventana |
 | E2E del tablero, accesibilidad y modo móvil | `pruebas/e2e_tablero.py` | Playwright con Edge del sistema |
 | Análisis estático | SonarQube | Ver [despliegue §6](manual_despliegue.md#6-integracion-continua-y-sonarqube) |
 

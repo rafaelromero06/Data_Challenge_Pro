@@ -1,6 +1,6 @@
 import math
 
-from frecuencias.optimizacion.objetivo import optimizar
+from frecuencias.optimizacion.objetivo import desvio_demanda, exceso_esperado, optimizar
 from frecuencias.optimizacion.parametros import ParametrosHora
 
 OCUPACIONES_SENSIBILIDAD = (0.65, 0.75, 0.85)
@@ -60,9 +60,34 @@ def recomendar(demanda_hora: float, demanda_hora_alta: float | None, p: Parametr
         "limitado_por": limitado_por,
         "metodo_vehiculos": metodo_vehiculos,
         "sensibilidad": sensibilidad(demanda_hora, demanda_alta, p),
+        "recaudo": estimar_recaudo(demanda_hora, demanda_alta, p, buses, buses_actual),
         "linea_base": {"buses_por_hora": int(min(linea_base, math.floor(60 / p.headway_minimo))),
                        "metodo": "ceil(carga_p90 / capacidad_efectiva), minimo por headway maximo"},
         "objetivo": objetivo,
+    }
+
+
+def estimar_recaudo(demanda_hora: float, demanda_hora_alta: float, p: ParametrosHora, buses: int,
+                    buses_actual: float | None) -> dict:
+    carga = demanda_hora * p.factor_carga
+    desvio = desvio_demanda(demanda_hora, demanda_hora_alta) * p.factor_carga
+
+    def en_riesgo(oferta: float) -> float:
+        return round(exceso_esperado(carga, desvio, oferta * p.capacidad), 2)
+
+    def en_pesos(pasajeros: float | None) -> float | None:
+        return None if p.tarifa is None or pasajeros is None else round(pasajeros * p.tarifa)
+
+    riesgo = en_riesgo(buses)
+    riesgo_actual = en_riesgo(buses_actual) if buses_actual else None
+    return {
+        "pasajeros_esperados": round(demanda_hora, 2),
+        "pasajeros_en_riesgo": riesgo,
+        "pasajeros_en_riesgo_actual": riesgo_actual,
+        "tarifa": p.tarifa,
+        "recaudo_esperado": en_pesos(demanda_hora),
+        "recaudo_en_riesgo": en_pesos(riesgo),
+        "recaudo_en_riesgo_actual": en_pesos(riesgo_actual),
     }
 
 

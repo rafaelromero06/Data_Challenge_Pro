@@ -2,14 +2,18 @@ import uuid
 from datetime import datetime
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import AfterValidator, BaseModel, Field
+
+from frecuencias.tiempo import a_zona
+
+FechaConZona = Annotated[datetime, AfterValidator(lambda valor: a_zona(valor).to_pydatetime())]
 
 
 class Ruta(BaseModel):
     id_ruta: int
     nombre: str | None
-    primera_franja: datetime
-    ultima_franja: datetime
+    primera_franja: FechaConZona
+    ultima_franja: FechaConZona
     franjas_con_servicio: int
 
 
@@ -29,9 +33,9 @@ class RecomendacionResumida(BaseModel):
 class PrediccionRespuesta(BaseModel):
     predictionId: str | None = Field(description="Identificador de la prediccion guardada en ai_frecuencias")
     routeId: int
-    generatedAt: datetime
-    referenceTime: datetime = Field(description="Ultima franja de 15 min cuyo dato se da por conocido (hora local)")
-    targetSlot: datetime = Field(description="Inicio de la franja de 15 min que se predice (hora local)")
+    generatedAt: FechaConZona
+    referenceTime: FechaConZona = Field(description="Ultima franja de 15 min cuyo dato se da por conocido")
+    targetSlot: FechaConZona = Field(description="Inicio de la franja de 15 min que se predice")
     horizonMinutes: int
     modelHorizonMinutes: int
     predictedPassengers: float
@@ -52,7 +56,7 @@ class PrediccionRespuesta(BaseModel):
 class RespuestaEjecucionPrediccion(BaseModel):
     routeId: int
     routeName: str | None
-    referenceTime: datetime
+    referenceTime: FechaConZona
     executionId: int | None
     saved: bool
     predictions: list[PrediccionRespuesta]

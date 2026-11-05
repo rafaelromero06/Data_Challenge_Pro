@@ -87,7 +87,7 @@ def fila_recomendacion(rec: dict, execution_id: int | None) -> dict:
                        "limitado_por": rec["limitado_por"], "metodo_vehiculos": rec["metodo_vehiculos"],
                        "origen_frecuencia_actual": rec["origen_frecuencia_actual"],
                        "demanda_inferior": rec["demanda_inferior"], "demanda_superior": rec["demanda_superior"],
-                       "objetivo": rec["objetivo"], "linea_base": rec["linea_base"],
+                       "objetivo": rec["objetivo"], "linea_base": rec["linea_base"], "recaudo": rec["recaudo"],
                        "fraccion_servicio": rec.get("fraccion_servicio"), "ventana_servicio": rec.get("ventana_servicio")},
     })
     return fila

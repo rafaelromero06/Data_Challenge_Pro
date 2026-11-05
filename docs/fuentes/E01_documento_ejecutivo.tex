@@ -19,7 +19,7 @@
 \title{\textbf{E01 · Documento ejecutivo}\\[0.3em]
 \large Frecuencias inteligentes para SOBUSA: demanda prevista, despachos recomendados y alertas}
 \author{Roger Daza \quad Matteo Del Sole \quad Rafael Romero\\[0.2em]\small Universidad del Norte · Reto Extreme Technologies -- SOBUSA}
-\date{29 de octubre de 2026}
+\date{4 de noviembre de 2026}
 
 \begin{document}
 \maketitle
@@ -91,6 +91,7 @@ La ocupación esperada con la recomendación tiene mediana de 65\,\%, el piso de
   \item \textbf{Capacidad y nivel de servicio por validar.} Usamos 50 pasajeros por bus (mediana observada en 2025), ocupación objetivo del 80\,\% e intervalo máximo de 10 minutos de día. En 7--20\,\% de los viajes la carga medida supera los 50 pasajeros, lo que sugiere que la capacidad real es mayor. Estos valores explican buena parte de las alertas de sobreocupación; la calibración de umbrales solo las redujo 14\,\%.
   \item \textbf{Pesos de la función objetivo.} El valor relativo de una hora de espera frente a una hora de bus son referencias del equipo. Definen cuánto servicio se cambia por costo, y deben fijarlos SOBUSA y Extreme Technologies.
   \item \textbf{Fuente de datos.} Los consolidados \texttt{timbradas\_*} entregados cubren solo ocho semanas de 2023 y tienen horas desplazadas. Por eso la demanda se reconstruyó desde los sensores. Los scripts de segmentación no se pudieron ejecutar con acceso de solo lectura; se replicó su lógica, con 99,7\,\% de coincidencia.
+  \item \textbf{Recaudo.} El sistema estima los pasajeros esperados y los que quedarían en riesgo de no abordar. Falta la tarifa del operador para expresarlos en pesos.
   \item \textbf{Notificaciones.} Correo y WhatsApp están implementados, pero sin credenciales del operador los envíos quedan simulados.
   \item \textbf{Alcance.} Tres rutas y datos hasta diciembre de 2025. No se probó en producción ni con el conjunto reservado del operador.
 \end{itemize}

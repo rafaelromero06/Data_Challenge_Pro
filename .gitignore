@@ -6,11 +6,13 @@ datos/
 modelos/paquetes/
 modelos/archivo/
 modelos/activos.json
+paquete_demo/
 reportes/
 .scannerwork/
 .coverage
 coverage.xml
 reporte-pruebas.xml
+!docs/evidencias/reporte-pruebas.xml
 .pytest_cache/
 paper/*.aux
 paper/*.log

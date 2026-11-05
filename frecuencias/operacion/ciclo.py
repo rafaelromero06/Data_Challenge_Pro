@@ -10,7 +10,7 @@ from frecuencias.alertas import reglas
 from frecuencias.analitica import monitoreo
 from frecuencias.analitica.carga import cargar_calendario
 from frecuencias.analitica.serie import preparar_serie
-from frecuencias.config import ARCHIVO_DEMANDA, CARPETA_DATOS, PASO_MIN
+from frecuencias.config import PASO_MIN
 from frecuencias.inferencia import retencion
 from frecuencias.inferencia.modelos import cargar_modelos
 from frecuencias.inferencia.prediccion import Predictor
@@ -49,13 +49,6 @@ class CicloEnCurso(RuntimeError):
     pass
 
 
-def extraer_local(desde: pd.Timestamp, hasta: pd.Timestamp) -> tuple[pd.DataFrame, pd.DataFrame]:
-    demanda = pd.read_parquet(ARCHIVO_DEMANDA)
-    viajes = pd.read_parquet(CARPETA_DATOS / "viajes.parquet")
-    return (demanda[(demanda["ts"] >= desde) & (demanda["ts"] < hasta)].reset_index(drop=True),
-            viajes[(viajes["fechasalida"] >= desde) & (viajes["fechasalida"] < hasta)].reset_index(drop=True))
-
-
 def ingerir(destino, origen: str, dias: int, id_padre: int) -> dict:
     with destino.connect() as conn:
         ultima = historico.ultima_franja(conn)
@@ -65,7 +58,7 @@ def ingerir(destino, origen: str, dias: int, id_padre: int) -> dict:
     hasta = min(desde.normalize() + pd.Timedelta(days=dias), a_local(pd.Timestamp(ahora_utc())).floor("h"))
     if hasta <= desde:
         return {"desde": desde, "hasta": desde, "franjas_leidas": 0, "problemas": []}
-    franjas, viajes = extraer_local(desde, hasta) if origen == "archivos" else historico.extraer_rango(db.motor_fuente(), desde, hasta)
+    franjas, viajes = historico.leer_archivos(desde, hasta) if origen == "archivos" else historico.extraer_rango(db.motor_fuente(), desde, hasta)
     with destino.begin() as conn:
         e = ejecuciones.iniciar(conn, "ingesta", {"origen": origen, "ciclo": id_padre}, propietario=trabajos.instancia())
         resumen, problemas = historico.cargar(conn, franjas, viajes, e["id"], set(RUTAS))

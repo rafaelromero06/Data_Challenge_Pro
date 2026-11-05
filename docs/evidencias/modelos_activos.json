@@ -1,0 +1,131 @@
+[
+ {
+  "id": 38,
+  "model_id": "demanda-lgbm-h30",
+  "version": "20261029T042643",
+  "horizonte_min": 30,
+  "estado": "activo",
+  "feature_version": "v3-sensores-3anios",
+  "semilla": 42,
+  "data_cutoff": "2025-12-12 04:45:00+00:00",
+  "artefacto": "paquetes/demanda-lgbm-h30-20261029T042643",
+  "artefacto_sha256": "3e89b72a348c883376568237146daf9cf20d3df73d12b625a982f24e5965006a",
+  "aprobado_por": "ciclo",
+  "entrenado_en": "2026-10-29 04:27:43.037871+00:00",
+  "activado_en": "2026-10-29 04:27:43.044872+00:00",
+  "comparacion": {
+   "ventana": [
+    "2025-12-05 00:00:00",
+    "2025-12-11 23:45:00"
+   ],
+   "franjas": 1379,
+   "candidato": {
+    "MAE": 15.690285198077651,
+    "RMSE": 21.906799050306237,
+    "WAPE": 0.101644219158962,
+    "sMAPE": 0.20652537297248283,
+    "desviacion_poisson": 3.2860303586850677
+   },
+   "activo": {
+    "MAE": 15.831616056361474,
+    "RMSE": 22.225393818399745,
+    "WAPE": 0.10255978344297419,
+    "sMAPE": 0.20775775945715375,
+    "desviacion_poisson": 3.318749222965629
+   },
+   "linea_base": {
+    "MAE": 33.91122794295383,
+    "RMSE": 56.74895847795737,
+    "WAPE": 0.21968244945639492,
+    "sMAPE": 0.3145594920092752
+   },
+   "activar": true
+  }
+ },
+ {
+  "id": 40,
+  "model_id": "demanda-lgbm-h60",
+  "version": "20261029T042920",
+  "horizonte_min": 60,
+  "estado": "activo",
+  "feature_version": "v3-sensores-3anios",
+  "semilla": 42,
+  "data_cutoff": "2025-12-12 04:45:00+00:00",
+  "artefacto": "paquetes/demanda-lgbm-h60-20261029T042920",
+  "artefacto_sha256": "0d39b59c80c4a0807f605004e0c2acbc4270f0f3f38f45dd55088e5580836828",
+  "aprobado_por": "ciclo",
+  "entrenado_en": "2026-10-29 04:30:20.493627+00:00",
+  "activado_en": "2026-10-29 04:30:20.496627+00:00",
+  "comparacion": {
+   "ventana": [
+    "2025-12-05 00:00:00",
+    "2025-12-11 23:45:00"
+   ],
+   "franjas": 1379,
+   "candidato": {
+    "MAE": 16.429989512734103,
+    "RMSE": 23.248137270426007,
+    "WAPE": 0.10643614400434223,
+    "sMAPE": 0.20814030869616704,
+    "desviacion_poisson": 3.551434728581608
+   },
+   "activo": {
+    "MAE": 16.497142619135,
+    "RMSE": 23.44116971112579,
+    "WAPE": 0.10687117274843762,
+    "sMAPE": 0.20861050146956034,
+    "desviacion_poisson": 3.5719861578429573
+   },
+   "linea_base": {
+    "MAE": 33.91122794295383,
+    "RMSE": 56.74895847795737,
+    "WAPE": 0.21968244945639492,
+    "sMAPE": 0.3145594920092752
+   },
+   "activar": true
+  }
+ },
+ {
+  "id": 39,
+  "model_id": "demanda-lgbm-h120",
+  "version": "20261029T042803",
+  "horizonte_min": 120,
+  "estado": "activo",
+  "feature_version": "v3-sensores-3anios",
+  "semilla": 42,
+  "data_cutoff": "2025-12-12 04:45:00+00:00",
+  "artefacto": "paquetes/demanda-lgbm-h120-20261029T042803",
+  "artefacto_sha256": "ea46439d67e3a070e6f8d0556cab231cac9c91fe88a8f19c064bcd224b390227",
+  "aprobado_por": "ciclo",
+  "entrenado_en": "2026-10-29 04:28:57.395558+00:00",
+  "activado_en": "2026-10-29 04:28:57.399558+00:00",
+  "comparacion": {
+   "ventana": [
+    "2025-12-05 00:00:00",
+    "2025-12-11 23:45:00"
+   ],
+   "franjas": 1379,
+   "candidato": {
+    "MAE": 16.700173402357745,
+    "RMSE": 23.519113813415185,
+    "WAPE": 0.10818643918020628,
+    "sMAPE": 0.21015575562876665,
+    "desviacion_poisson": 3.6441226554330863
+   },
+   "activo": {
+    "MAE": 16.870247950577046,
+    "RMSE": 23.826332118881158,
+    "WAPE": 0.10928820976208722,
+    "sMAPE": 0.2115522301322872,
+    "desviacion_poisson": 3.7042107662914563
+   },
+   "linea_base": {
+    "MAE": 33.91122794295383,
+    "RMSE": 56.74895847795737,
+    "WAPE": 0.21968244945639492,
+    "sMAPE": 0.3145594920092752
+   },
+   "activar": true
+  }
+ }
+]

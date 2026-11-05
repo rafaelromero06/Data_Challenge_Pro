@@ -6,7 +6,8 @@ Pasos para levantar la solución en una máquina con Docker, configurarla, opera
 
 - Docker Engine 24 o superior con Docker Compose v2. En Windows, Docker Desktop.
 - 4 GB de RAM libres para la base y la API; 4 GB más si se levanta SonarQube.
-- Acceso de red a la base del operador (PostgreSQL 14) con un usuario de solo lectura.
+- Para leer datos nuevos: acceso de red a la base del operador (PostgreSQL 14) con un usuario de solo lectura. La demostración con el paquete no lo necesita.
+- Para importar el paquete de demostración: Python 3.12 o superior en la máquina, sin dependencias adicionales.
 - Para desarrollo local, opcional: Python 3.12 y `pip install -r requirements-dev.txt`.
 
 ## 2. Configuración
@@ -53,9 +54,31 @@ docker compose ps
 curl http://localhost:8000/api/v1/salud
 ```
 
-### Cargar el histórico y entrenar (una sola vez)
+La base empieza vacía y el repositorio no trae datos ni modelos, así que `/salud` responde `"estado": "sin_preparar"` con el motivo y las instrucciones, y el tablero muestra el mismo aviso. La API no se reinicia en bucle: los endpoints que necesitan modelos responden `503` hasta que los cargue por una de las dos opciones siguientes.
 
-La base empieza vacía. Haga primero una copia local de la base del operador, cargue con ella el histórico y entrene los modelos. Requiere Python local con `.env` apuntando a `localhost:5433` y el usuario dueño:
+### Opción A: importar el paquete de demostración
+
+El paquete trae una copia del esquema `ai_frecuencias`, los modelos activos y los archivos de `datos/`. No incluye claves de acceso.
+
+```bash
+python pruebas/paquete_demo.py importar --archivo paquete_demo.tar.gz
+docker compose exec api python -m frecuencias.seguridad crear --nombre demo --rol administrador
+```
+
+- **Qué hace.** Copia `modelos/` y `datos/`, restaura la base, aplica las migraciones pendientes y reinicia la API.
+- **Seguro.** Se niega a restaurar sobre una base con datos, porque los borraría. Para sustituirla a propósito, agregue `--reemplazar`.
+- **Crear el paquete.** En un despliegue ya cargado: `python pruebas/paquete_demo.py exportar`. Queda en `paquete_demo/`, que está en `.gitignore`.
+- **Confidencialidad.** Contiene datos del operador. Compártalo solo por un canal privado, nunca en el repositorio.
+
+Para demostrar el ciclo completo con los días de `datos/` que aún no están en la base:
+
+```bash
+python pruebas/demo_ciclo.py --clave <clave de operador o administrador> --dias 3
+```
+
+### Opción B: cargar el histórico y entrenar (una sola vez)
+
+Haga primero una copia local de la base del operador, cargue con ella el histórico y entrene los modelos. Requiere Python local con `.env` apuntando a `localhost:5433` y el usuario dueño:
 
 ```bash
 python -m frecuencias.ingesta.extraccion                 # copia de solo lectura de la base del operador en datos/
@@ -81,7 +104,7 @@ python -m frecuencias.seguridad listar
 python -m frecuencias.seguridad revocar --nombre operador-turno-1
 ```
 
-La clave se muestra una sola vez; en la base se guarda solo su huella SHA-256. Roles:
+Dentro de Docker, antepóngales `docker compose exec api`. La clave se muestra una sola vez; en la base se guarda solo su huella SHA-256. Roles:
 
 - `lector`: consulta.
 - `operador`: predicciones, ciclos, reintentos y gestión de alertas.
@@ -108,7 +131,9 @@ El mapa del tablero se dibuja en el navegador del usuario, no en el servidor. El
 - **Logs:** `docker compose logs -f api programador`. Son JSON con `correlation_id` y, si hay trazas, `trace_id`.
 - **Monitoreo del modelo:** tablero, pestaña *Modelos*, o `GET /api/v1/monitoring`. Si el monitoreo muestra deriva o degradación, el ciclo reentrena por su cuenta, con al menos 24 h entre intentos.
 - **Activar o revertir un modelo:** pestaña *Modelos*, o `POST /api/v1/models/{id}/activate`, con rol administrador. Verifica la huella del artefacto antes de activarlo.
-- **Cambiar un umbral o un peso:** `PUT /api/v1/parameters/{clave}`, con rol administrador. Crea una versión nueva, conserva la anterior y no requiere desplegar.
+- **Cambiar un umbral o un peso:** `PUT /api/v1/parameters/{clave}`, con rol administrador. Crea una versión nueva, conserva la anterior y no requiere desplegar. Así se define también `tarifa_pasajero`, que activa la estimación del recaudo.
+- **Recargar un periodo corregido:** el ciclo no relee periodos ya cargados. Si el operador corrige datos pasados, use `python -m frecuencias.ingesta.historico --desde AAAA-MM-DD --hasta AAAA-MM-DD --origen base`. Es idempotente y no mueve la marca de agua del ciclo.
+- **Recalcular el perfil por segmento:** el ciclo lo hace cuando hay datos nuevos. Para hacerlo a mano, sin leer la base del operador: `python -m frecuencias.segmentos.carga --solo-perfil --hasta AAAA-MM-DD`.
 
 ## 6. Integración continua y SonarQube
 
@@ -163,4 +188,5 @@ Para restaurar: `pg_restore -c -d <base> respaldo_ai_frecuencias.dump`. Los paqu
 | La API no arranca: `ArtefactoAlterado` | Un archivo de `modelos/paquetes` cambió (por ejemplo, git convirtió fines de línea) | Restaure el paquete original; `modelos/` debe quedar como binario en `.gitattributes` |
 | `409` al lanzar un ciclo | Hay otro ciclo en curso en cualquier proceso | Espere o revise *Ejecuciones*; si el proceso murió, a los 180 s queda `interrumpida` y se puede reintentar |
 | Alertas ALT-009 de datos atrasados | La fuente no tiene datos recientes o no responde | Revise la conectividad; el ciclo reintenta solo si la falla es transitoria |
+| `/salud` responde `sin_preparar` | La API no encontró histórico o modelos activos | Siga la opción A o B de la [sección 3](#3-primer-despliegue) y reinicie la API |
 | `permission denied` desde la API | Una tabla nueva no dio permisos al rol | Las migraciones nuevas heredan permisos por `ALTER DEFAULT PRIVILEGES`; si la tabla la creó otro usuario, ejecute `GRANT SELECT, INSERT, UPDATE ON ... TO ai_frecuencias_app` |

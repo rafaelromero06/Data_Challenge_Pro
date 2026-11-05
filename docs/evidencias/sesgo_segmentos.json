@@ -1,0 +1,137 @@
+{
+ "ventana": [
+  "2025-12-01",
+  "2025-12-19"
+ ],
+ "antelaciones_min": [
+  15,
+  30,
+  45,
+  60
+ ],
+ "cuotas_desde_observaciones_previas": 790178,
+ "predicciones": 3288,
+ "cobertura_asignacion": 0.9283,
+ "total": {
+  "observado": 550096.0,
+  "predicho": 596586.4,
+  "wape": 0.4442,
+  "sesgo": 0.0845,
+  "filas": 102594
+ },
+ "por_ruta": {
+  "2": {
+   "observado": 150501.0,
+   "predicho": 162155.4,
+   "wape": 0.4983,
+   "sesgo": 0.0774,
+   "filas": 35956
+  },
+  "16": {
+   "observado": 301244.0,
+   "predicho": 325058.7,
+   "wape": 0.3637,
+   "sesgo": 0.0791,
+   "filas": 32062
+  },
+  "21": {
+   "observado": 98351.0,
+   "predicho": 109372.2,
+   "wape": 0.6082,
+   "sesgo": 0.1121,
+   "filas": 34576
+  }
+ },
+ "por_tipo_dia": {
+  "dom_fest": {
+   "observado": 49849.0,
+   "predicho": 57381.1,
+   "wape": 0.6307,
+   "sesgo": 0.1511,
+   "filas": 16806
+  },
+  "habil": {
+   "observado": 438551.0,
+   "predicho": 471751.7,
+   "wape": 0.4214,
+   "sesgo": 0.0757,
+   "filas": 74230
+  },
+  "sabado": {
+   "observado": 61696.0,
+   "predicho": 67453.6,
+   "wape": 0.4559,
+   "sesgo": 0.0933,
+   "filas": 11558
+  }
+ },
+ "por_franja": {
+  "pico": {
+   "observado": 237506.0,
+   "predicho": 257993.8,
+   "wape": 0.4196,
+   "sesgo": 0.0863,
+   "filas": 36748
+  },
+  "valle": {
+   "observado": 312590.0,
+   "predicho": 338592.6,
+   "wape": 0.4629,
+   "sesgo": 0.0832,
+   "filas": 65846
+  }
+ },
+ "por_mitad_de_recorrido": {
+  "primera": {
+   "observado": 288104.0,
+   "predicho": 311994.4,
+   "wape": 0.4251,
+   "sesgo": 0.0829,
+   "filas": 50583
+  },
+  "segunda": {
+   "observado": 261992.0,
+   "predicho": 284592.0,
+   "wape": 0.4652,
+   "sesgo": 0.0863,
+   "filas": 52011
+  }
+ },
+ "segmentos_con_mayor_sesgo": [
+  {
+   "id_ruta": 2,
+   "nro_segmento": 78,
+   "observado": 1046.0,
+   "predicho": 2587.7,
+   "sesgo": 1.4739
+  },
+  {
+   "id_ruta": 16,
+   "nro_segmento": 36,
+   "observado": 3087.0,
+   "predicho": 5941.3,
+   "sesgo": 0.9246
+  },
+  {
+   "id_ruta": 16,
+   "nro_segmento": 72,
+   "observado": 2382.0,
+   "predicho": 4548.7,
+   "sesgo": 0.9096
+  },
+  {
+   "id_ruta": 16,
+   "nro_segmento": 87,
+   "observado": 3059.0,
+   "predicho": 5472.5,
+   "sesgo": 0.789
+  },
+  {
+   "id_ruta": 21,
+   "nro_segmento": 19,
+   "observado": 992.0,
+   "predicho": 325.7,
+   "sesgo": -0.6717
+  }
+ ]
+}

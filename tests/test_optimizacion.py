@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 
 from frecuencias.optimizacion import objetivo, oferta
-from frecuencias.optimizacion.frecuencia import buses_necesarios, recomendar
+from frecuencias.optimizacion.frecuencia import buses_necesarios, estimar_recaudo, recomendar
 from frecuencias.optimizacion.parametros import GENERALES, franja_de, parametros_hora
 
 NOCTURNO = GENERALES["headway_maximo:nocturno"]
@@ -214,3 +214,26 @@ def test_no_se_recomienda_despues_del_ultimo_despacho_y_la_hora_parcial_se_prorr
     assert recs[0]["fraccion_servicio"] == pytest.approx(46 / 60, abs=1e-3)
     assert recs[0]["buses_por_hora_actual"] == pytest.approx(3 / (46 / 60), abs=0.01)
     assert recs[0]["ventana_servicio"] == [str(dia + pd.Timedelta(hours=5)), str(dia + pd.Timedelta(hours=20))]
+
+
+def test_sin_tarifa_el_recaudo_solo_cuenta_pasajeros():
+    r = recomendar(1000, 1200, parametros_hora({"factor_carga": 0.4}, 7, 0), 6.0)["recaudo"]
+    assert r["pasajeros_esperados"] == 1000
+    assert r["pasajeros_en_riesgo_actual"] is not None
+    assert r["tarifa"] is None
+    assert r["recaudo_esperado"] is None
+    assert r["recaudo_en_riesgo"] is None
+
+
+def test_con_tarifa_se_estima_el_recaudo_y_el_riesgo_baja_con_mas_oferta():
+    p = parametros_hora({"tarifa_pasajero": 3000.0, "factor_carga": 0.4}, 7, 0)
+    r = estimar_recaudo(2000, 2400, p, 20, 8.0)
+    assert r["recaudo_esperado"] == 6_000_000
+    assert r["pasajeros_en_riesgo"] < r["pasajeros_en_riesgo_actual"]
+    assert r["recaudo_en_riesgo_actual"] == round(r["pasajeros_en_riesgo_actual"] * 3000)
+
+
+def test_sin_oferta_actual_no_se_inventa_el_riesgo_actual():
+    r = estimar_recaudo(100, 120, parametros_hora({"tarifa_pasajero": 3000.0}, 7, 0), 5, None)
+    assert r["pasajeros_en_riesgo_actual"] is None
+    assert r["recaudo_en_riesgo_actual"] is None

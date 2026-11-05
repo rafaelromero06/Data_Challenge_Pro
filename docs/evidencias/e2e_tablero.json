@@ -6,11 +6,11 @@
    "rutas": 3,
    "horas": 48,
    "acciones": 6,
-   "resumen": "Situación del domingo, 14 de diciembre de 2025 a las 06:00 · último dato recibido: 2025-12-14 23:30"
+   "resumen": "Situación del jueves, 18 de diciembre de 2025 a las 06:00 · último dato recibido: 18/12/2025 23:45"
   },
   "mapa_ruta": {
    "ruta": "16",
-   "tipo_dia": "dom_fest",
+   "tipo_dia": "habil",
    "hora": "6",
    "tramos": 124,
    "teselas": 18,
@@ -26,26 +26,27 @@
    "filas_tabla": 8,
    "tarjetas_recomendacion": 2,
    "tramo_critico": 2,
-   "funcion_objetivo": 2
+   "funcion_objetivo": 2,
+   "recaudo": 2
   },
   "teclado_pestanas": true,
   "alertas_agrupadas": {
    "grupos_en_pagina": 25,
-   "seleccion": "3 alertas seleccionadas en 1 grupo"
+   "seleccion": "5 alertas seleccionadas en 1 grupo"
   },
   "alertas": {
-   "filas": 3,
+   "filas": 5,
    "historial": 1
   },
   "ejecuciones": 30,
   "modelos": 10,
-  "parametros": 115,
+  "parametros": 116,
   "modelos_en_uso": 3,
   "monitoreo": 12,
-  "botones_reintento": 0,
+  "botones_reintento": 1,
   "exportacion": {
-   "archivo": "alerts-20261030T001822Z.csv",
-   "bytes": 814192
+   "archivo": "alerts-20261105T040449Z.csv",
+   "bytes": 1077578
   }
  },
  "contraste_claro": {

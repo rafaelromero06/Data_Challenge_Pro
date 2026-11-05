@@ -8,7 +8,7 @@ from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.exc import InterfaceError, OperationalError
 
 from frecuencias.analitica.calidad import validar_demanda, validar_viajes
-from frecuencias.config import ARCHIVO_DEMANDA, CARPETA_DATOS, PASO_MIN, ZONA_HORARIA
+from frecuencias.config import ARCHIVO_DEMANDA, CARPETA_DATOS, NOMBRES_RUTAS, PASO_MIN, ZONA_HORARIA
 from frecuencias.ingesta.consultas import QUERY_CONTEO, QUERY_VIAJES_RANGO
 from frecuencias.observabilidad import describir_error
 from frecuencias.persistencia.tablas import demanda, problema_calidad, viaje
@@ -171,22 +171,30 @@ def extraer_rango(motor: Engine, desde: pd.Timestamp, hasta: pd.Timestamp) -> tu
     return franjas, viajes
 
 
-def carga_inicial(motor_destino: Engine, hasta: pd.Timestamp | None = None) -> dict:
-    from frecuencias.persistencia import ejecuciones
-
+def leer_archivos(desde: pd.Timestamp | None, hasta: pd.Timestamp | None) -> tuple[pd.DataFrame, pd.DataFrame]:
     demanda_df = pd.read_parquet(ARCHIVO_DEMANDA)
     viajes_df = pd.read_parquet(CARPETA_DATOS / "viajes.parquet")
-    rutas = set(pd.read_parquet(CARPETA_DATOS / "rutas.parquet")["id_ruta"].astype(int))
+    if desde is not None:
+        demanda_df = demanda_df[demanda_df["ts"] >= desde]
+        viajes_df = viajes_df[viajes_df["fechasalida"] >= desde]
     if hasta is not None:
         demanda_df = demanda_df[demanda_df["ts"] < hasta]
         viajes_df = viajes_df[viajes_df["fechasalida"] < hasta]
+    return demanda_df.reset_index(drop=True), viajes_df.reset_index(drop=True)
+
+
+def _guardar_carga(motor_destino: Engine, demanda_df: pd.DataFrame, viajes_df: pd.DataFrame, detalle: dict) -> dict:
+    from frecuencias.persistencia import ejecuciones
+
     with motor_destino.begin() as conn:
-        e = ejecuciones.iniciar(conn, "ingesta", {"modo": "carga_inicial", "origen": "datos/"})
+        e = ejecuciones.iniciar(conn, "ingesta", detalle)
     try:
         with motor_destino.begin() as conn:
-            resumen, _ = cargar(conn, demanda_df, viajes_df, e["id"], rutas)
-            ultima = demanda_df["ts"].max()
-            marca = (pd.Timestamp(ultima) + pd.Timedelta(minutes=PASO_MIN)).tz_localize(ZONA_HORARIA)
+            resumen, _ = cargar(conn, demanda_df, viajes_df, e["id"], set(NOMBRES_RUTAS))
+            marca = None
+            if not demanda_df.empty:
+                ultima = pd.Timestamp(demanda_df["ts"].max())
+                marca = (ultima + pd.Timedelta(minutes=PASO_MIN)).tz_localize(ZONA_HORARIA)
             ejecuciones.finalizar(conn, e["id"], "exitosa", registros_leidos=resumen["franjas_leidas"],
                                   registros_rechazados=resumen["rechazados"], marca_agua_hasta=marca, detalle=resumen)
     except Exception as error:
@@ -196,15 +204,39 @@ def carga_inicial(motor_destino: Engine, hasta: pd.Timestamp | None = None) -> d
     return {"execution_id": e["id"], **resumen}
 
 
+def carga_inicial(motor_destino: Engine, hasta: pd.Timestamp | None = None) -> dict:
+    demanda_df, viajes_df = leer_archivos(None, hasta)
+    return _guardar_carga(motor_destino, demanda_df, viajes_df, {"modo": "carga_inicial", "origen": "datos/"})
+
+
+def recargar_rango(motor_destino: Engine, desde: pd.Timestamp, hasta: pd.Timestamp, origen: str = "archivos",
+                   motor_fuente: Engine | None = None) -> dict:
+    if hasta <= desde:
+        raise ValueError("La fecha --hasta debe ser posterior a --desde.")
+    demanda_df, viajes_df = extraer_rango(motor_fuente, desde, hasta) if origen == "base" else leer_archivos(desde, hasta)
+    detalle = {"modo": "recarga_rango", "origen": origen, "desde": str(desde), "hasta": str(hasta)}
+    return _guardar_carga(motor_destino, demanda_df, viajes_df, detalle)
+
+
 def main():
     from frecuencias import db
 
-    parser = argparse.ArgumentParser(description="Carga el historico analitico en ai_frecuencias")
+    parser = argparse.ArgumentParser(description="Carga o recarga el historico analitico en ai_frecuencias")
+    parser.add_argument("--desde", help="Fecha local (AAAA-MM-DD); con --hasta, recarga solo ese rango")
     parser.add_argument("--hasta", help="Fecha local (AAAA-MM-DD) hasta la que se carga; por defecto todo")
+    parser.add_argument("--origen", choices=["archivos", "base"], default="archivos",
+                        help="En una recarga por rango: datos/ o la base del operador")
     argumentos = parser.parse_args()
     hasta = pd.Timestamp(argumentos.hasta) if argumentos.hasta else None
-    resumen = carga_inicial(db.motor_destino(), hasta)
-    print(resumen)
+    if argumentos.desde:
+        if hasta is None:
+            parser.error("Indique --hasta junto con --desde")
+        fuente = db.motor_fuente() if argumentos.origen == "base" else None
+        print(recargar_rango(db.motor_destino(), pd.Timestamp(argumentos.desde), hasta, argumentos.origen, fuente))
+        return
+    if argumentos.origen == "base":
+        parser.error("Con --origen base indique --desde y --hasta")
+    print(carga_inicial(db.motor_destino(), hasta))
 
 
 if __name__ == "__main__":

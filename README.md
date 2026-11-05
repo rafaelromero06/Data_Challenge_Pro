@@ -14,7 +14,7 @@ Prototipo para el reto de frecuencias de SOBUSA y Extreme Technologies. Predice 
 - **Pantalla «Hoy».** Muestra, para las tres rutas a la vez, qué hacer en la hora actual y la siguiente en lenguaje operativo («Agregar 2 buses entre 06:15 y 07:15»), la franja del día y las alertas pendientes. Las horas después de la última salida programada aparecen como fuera de servicio y no piden buses.
 - **Ciclo incremental.** Se ejecuta como trabajo con avance, latido, reanudación tras reinicios y reintentos. Monitorea deriva, error y cobertura, y reentrena con comparación campeón/retador.
 - **Calidad del software.**
-  - 322 pruebas, con 79 % de cobertura sobre la base cargada.
+  - 411 pruebas, con 80 % de cobertura sobre la base cargada.
   - SonarQube sin bugs, vulnerabilidades ni code smells.
   - p95 de las consultas paginadas de 146 ms con 10 usuarios concurrentes.
   - Ingesta de 808.345 registros en 149 s, sin duplicados al repetir.
@@ -27,9 +27,22 @@ docker compose up -d --build  # base, migraciones y usuario restringido, API
 curl http://localhost:8000/api/v1/salud
 ```
 
+Un clon limpio no trae datos ni modelos: los primeros son del operador y los segundos se generan con ellos. La API arranca igual, `/salud` responde `"estado": "sin_preparar"` y explica qué falta. Para dejarla operando hay dos caminos:
+
+- **Con el paquete de demostración**, que el equipo entrega por un canal privado y no requiere acceso a la base del operador:
+
+  ```bash
+  python pruebas/paquete_demo.py importar --archivo paquete_demo.tar.gz
+  docker compose exec api python -m frecuencias.seguridad crear --nombre demo --rol administrador
+  ```
+
+- **Con acceso a la base del operador:** extraer, cargar y entrenar según el [manual de despliegue](docs/manual_despliegue.md#3-primer-despliegue).
+
+Con la API operando:
+
 - **Tablero:** `http://localhost:8000/`
 - **Documentación interactiva de la API:** `http://localhost:8000/docs`, fuera de producción.
-- **Primera carga de datos y modelos:** ver el [manual de despliegue](docs/manual_despliegue.md#3-primer-despliegue).
+- **Demostración del ciclo completo:** `python pruebas/demo_ciclo.py --clave <clave>`, ver el [guion](docs/guion_demo.md).
 
 Servicios opcionales:
 
@@ -45,7 +58,7 @@ docker compose --profile calidad up -d          # servidor SonarQube local
 conda create -n frecuencias python=3.12 && conda activate frecuencias
 pip install -r requirements-dev.txt
 docker compose up -d db && python -m alembic upgrade head
-python -m pytest                                  # 322 pruebas, con la base cargada; -m "not lenta" para las rápidas
+python -m pytest                                  # 411 pruebas, con la base cargada; -m "not lenta" para las rápidas
 uvicorn frecuencias.api.main:app --reload
 python -m frecuencias.operacion.ciclo --origen base --dias 1
 ```
@@ -64,9 +77,9 @@ frecuencias/
   persistencia/    tablas y repositorios de ai_frecuencias, rol de base de datos
   api/             FastAPI /api/v1, esquemas, errores, autenticación
   tablero/         tablero web
-migrations/        Alembic (0001 a 0009)
+migrations/        Alembic (0001 a 0011)
 tests/             pruebas pytest
-pruebas/           carga, volumen, EXPLAIN, humo en Docker, E2E del tablero, informe de SonarQube
+pruebas/           carga, volumen, EXPLAIN, humo en Docker, E2E, SonarQube, paquete y demo del ciclo, sesgo por segmento
 docs/              entregables y manuales
 paper/             artículo técnico del modelo
 ```
@@ -77,20 +90,22 @@ paper/             artículo técnico del modelo
 |---|---|
 | E01 | [Documento ejecutivo](docs/E01_documento_ejecutivo.pdf) |
 | E02 | [Especificación técnica](docs/E02_especificacion_tecnica.pdf) |
-| E03 | Este repositorio, [`requirements.txt`](requirements.txt), [pruebas](tests/) y [reporte de SonarQube](docs/evidencias/sonarqube.json) |
+| E03 | Este repositorio, [`requirements.txt`](requirements.txt), [pruebas](tests/), [reporte de ejecución](docs/evidencias/reporte-pruebas.xml) y [reporte de SonarQube](docs/evidencias/sonarqube.json) |
 | E04 | [Migraciones Alembic](migrations/versions/), con índices y datos semilla |
-| E05 | [Reporte de entrenamiento](modelos/reporte_entrenamiento.json) y [artículo técnico](paper/main.pdf) |
+| E05 | [Reporte de entrenamiento](modelos/reporte_entrenamiento.json), [modelos activos](docs/evidencias/modelos_activos.json), [sesgo por segmento](docs/evidencias/sesgo_segmentos.json) y [artículo técnico](paper/main.pdf) |
+| E06 | Prototipo: [API](frecuencias/api/main.py) y [tablero](frecuencias/tablero/index.html), con predicción, recomendación y alertas |
 | E07 | [Mapa de tablas, consultas de solo lectura, marca de agua y rendimiento](docs/E07_mapa_tablas.md) |
-| E08 | [Evidencias de pruebas](docs/evidencias/): unitarias, carga, volumen, EXPLAIN, humo y E2E |
+| E08 | [Evidencias de pruebas](docs/evidencias/): unitarias, integración, contrato, ML, carga, volumen, EXPLAIN, humo, E2E, clon limpio y ciclo completo |
 | E09 | [`Dockerfile`](Dockerfile), [`docker-compose.yml`](docker-compose.yml) y [`.env.example`](.env.example) |
 | E10 | Este README, [OpenAPI](docs/openapi.json), [manual técnico](docs/manual_tecnico.md), [manual de usuario](docs/manual_usuario.md) y [manual de despliegue](docs/manual_despliegue.md) |
+| E11 | Demostración: [guion del video](docs/guion_demo.md) y presentación final |
 | E12 | [Plan de evolución: integración, escalabilidad, costos y riesgos](docs/E12_plan_evolucion.pdf) |
 
-El código no lleva comentarios ni docstrings, por convención del equipo. La explicación de cada archivo y de cada cambio está en `comentarios_codigo.pdf`.
+El código no lleva comentarios ni docstrings, por convención del equipo. La explicación de cada archivo y de cada cambio está en [`comentarios_codigo.pdf`](comentarios_codigo.pdf).
 
 ## Seguridad y datos
 
 - Credenciales solo por variables de entorno. `.env` está en `.gitignore`.
 - La base del operador se lee con transacciones de solo lectura y timeout. No se modifican tablas, triggers, funciones ni scripts del operador.
-- La aplicación escribe con un usuario sin permisos de borrado ni DDL (ver [E07](docs/E07_mapa_tablas.md#1-dos-bases-dos-usuarios-dos-permisos)).
+- La aplicación escribe con un usuario sin DDL y sin permiso de borrar historia; solo puede reemplazar el perfil derivado por segmento (ver [E07](docs/E07_mapa_tablas.md#1-dos-bases-dos-usuarios-dos-permisos)).
 - Las claves de acceso a la API se guardan como huella SHA-256 y tienen roles (lector, operador, administrador).

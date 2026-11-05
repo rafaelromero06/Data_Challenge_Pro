@@ -1,9 +1,13 @@
+from unittest import mock
+
 import pandas as pd
 import pytest
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.exc import OperationalError
 
 from frecuencias import db
+from frecuencias.persistencia import roles
+from frecuencias.persistencia.tablas import perfil_segmento
 from frecuencias.segmentos import carga
 
 VACIO = (pd.DataFrame(columns=["estacionalidad", "id_estacionalidad", "fecha_inicio", "fecha_fin"]),
@@ -80,3 +84,54 @@ def test_asignacion_al_segmento_mas_cercano_y_carga_balanceada(conn):
     assert pd.Timestamp(obs.loc[(1, 99902), "franja"]).tz_convert("America/Bogota").strftime("%H:%M") == "07:15"
     assert float(obs["distancia_max_m"].max()) < carga.DISTANCIA_MAXIMA_RUTA_M
     assert {(p["regla"], p["clave"]["idprogramacion"]) for p in problemas} == {("CAL-201", 1), ("CAL-202", 2)}
+
+
+@pytest.mark.integracion
+def test_el_rol_de_aplicacion_puede_recalcular_el_perfil(conn):
+    conn.execute(text("""
+        INSERT INTO ai_frecuencias.route_segment (id_segmento, id_config, id_ruta, nro_segmento, longitud_m, inicio_m, geom)
+        VALUES (99903, 999, 998, 1, 1094, 0, ST_GeomFromText('LINESTRING(-74.80 10.90, -74.79 10.90)', 4326))"""))
+    previo = {c.name: 1 for c in perfil_segmento.columns
+              if c.name not in ("periodo_desde", "periodo_hasta", "execution_id", "calculado_en")}
+    conn.execute(perfil_segmento.insert(), [{**previo, "id_segmento": 99903, "tipo_dia": "sabado", "hora": 7,
+                                             "id_ruta": 998, "periodo_desde": "2025-01-01",
+                                             "periodo_hasta": "2025-01-02"}])
+    conn.execute(text(f"SET LOCAL ROLE {roles.ROL_APLICACION}"))
+    nuevo = pd.DataFrame([{**previo, "id_segmento": 99903, "tipo_dia": "habil", "hora": 8, "id_ruta": 998}])
+    with mock.patch.object(carga, "construir_perfil", return_value=nuevo):
+        resultado = carga.recalcular_perfil(conn, pd.Timestamp("2025-12-19"), None)
+    filas = conn.execute(select(perfil_segmento.c.tipo_dia).where(perfil_segmento.c.id_ruta == 998)).all()
+    assert resultado["filas"] == 1 and [f.tipo_dia for f in filas] == ["habil"]
+
+
+def test_refrescar_perfil_registra_la_ejecucion_y_tambien_el_fallo():
+    motor = mock.MagicMock()
+    corte = pd.Timestamp("2025-12-19")
+    with mock.patch.object(carga, "ejecuciones") as ejecuciones, \
+            mock.patch.object(carga, "recalcular_perfil", return_value={"filas": 3, "observaciones": 9}):
+        ejecuciones.iniciar.return_value = {"id": 7}
+        assert carga.refrescar_perfil(motor, corte) == {"execution_id": 7, "filas": 3, "observaciones": 9}
+        assert ejecuciones.finalizar.call_args.args[2] == "exitosa"
+    with mock.patch.object(carga, "ejecuciones") as ejecuciones, \
+            mock.patch.object(carga, "recalcular_perfil", side_effect=RuntimeError("sin permiso")):
+        ejecuciones.iniciar.return_value = {"id": 8}
+        with pytest.raises(RuntimeError):
+            carga.refrescar_perfil(motor, corte)
+        assert ejecuciones.finalizar.call_args.args[2] == "fallida"
+
+
+def test_cli_solo_perfil_no_lee_la_base_del_operador():
+    with mock.patch("sys.argv", ["carga", "--solo-perfil", "--hasta", "2025-12-19"]), \
+            mock.patch.object(db, "motor_destino", return_value="destino"), \
+            mock.patch.object(db, "motor_fuente") as fuente, \
+            mock.patch.object(carga, "refrescar_perfil", return_value={"filas": 1}) as refrescar:
+        carga.main()
+    refrescar.assert_called_once_with("destino", pd.Timestamp("2025-12-19"))
+    fuente.assert_not_called()
+
+
+def test_cli_solo_perfil_exige_la_fecha_final():
+    with mock.patch("sys.argv", ["carga", "--solo-perfil"]), mock.patch.object(db, "motor_destino"), \
+            pytest.raises(SystemExit) as salida:
+        carga.main()
+    assert salida.value.code == 2

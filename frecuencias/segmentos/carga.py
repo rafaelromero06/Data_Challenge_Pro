@@ -275,6 +275,21 @@ def recalcular_perfil(conn: Connection, hasta: pd.Timestamp, execution_id: int |
             "observaciones": len(observaciones)}
 
 
+def refrescar_perfil(destino: Engine, hasta: pd.Timestamp) -> dict:
+    with destino.begin() as conn:
+        e = ejecuciones.iniciar(conn, "ingesta", {"modo": "perfil_segmentos", "hasta": str(hasta)})
+    try:
+        with destino.begin() as conn:
+            resumen = recalcular_perfil(conn, hasta, e["id"])
+            ejecuciones.finalizar(conn, e["id"], "exitosa", registros_leidos=resumen.get("observaciones", 0),
+                                  detalle=resumen)
+        return {"execution_id": e["id"], **resumen}
+    except Exception as error:
+        with destino.begin() as conn:
+            ejecuciones.finalizar(conn, e["id"], "fallida", error=describir_error(error, 2000))
+        raise
+
+
 def main():
     from frecuencias import db
 
@@ -282,9 +297,16 @@ def main():
     parser.add_argument("--desde", help="Fecha local AAAA-MM-DD")
     parser.add_argument("--hasta", help="Fecha local AAAA-MM-DD (excluida)")
     parser.add_argument("--validar", help="Compara un dia (AAAA-MM-DD) con timbradas_segmentos del operador")
+    parser.add_argument("--solo-perfil", action="store_true",
+                        help="Recalcula el perfil con las observaciones guardadas, sin leer la base del operador")
     args = parser.parse_args()
     if args.validar:
         print(validar_contra_operador(db.motor_destino(), db.motor_fuente(), pd.Timestamp(args.validar)))
+        return
+    if args.solo_perfil:
+        if not args.hasta:
+            parser.error("Indique --hasta con --solo-perfil")
+        print(refrescar_perfil(db.motor_destino(), pd.Timestamp(args.hasta)))
         return
     if not (args.desde and args.hasta):
         parser.error("Indique --desde y --hasta, o --validar")

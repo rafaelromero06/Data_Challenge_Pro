@@ -5,6 +5,10 @@ from frecuencias.inferencia import artefactos
 COMANDO_ENTRENAMIENTO = "python -m frecuencias.inferencia.entrenamiento"
 
 
+class SinModelos(RuntimeError):
+    pass
+
+
 def _validar(paquete: artefactos.Paquete) -> artefactos.Paquete:
     if paquete.meta["feature_version"] != FEATURE_VERSION or paquete.meta["features"] != FEATURES:
         raise RuntimeError(
@@ -25,12 +29,15 @@ def desde_archivo() -> dict[int, artefactos.Paquete]:
 
 def cargar_modelos(motor=None) -> dict[int, artefactos.Paquete]:
     paquetes = {}
-    if motor is not None:
-        from frecuencias.persistencia import registro_modelos
-        with motor.connect() as conn:
-            paquetes = desde_registro(registro_modelos.activos(conn))
+    try:
+        if motor is not None:
+            from frecuencias.persistencia import registro_modelos
+            with motor.connect() as conn:
+                paquetes = desde_registro(registro_modelos.activos(conn))
+        if not paquetes:
+            paquetes = desde_archivo()
+    except FileNotFoundError as error:
+        raise SinModelos(f"Falta un archivo de los modelos activos: {error.filename}") from error
     if not paquetes:
-        paquetes = desde_archivo()
-    if not paquetes:
-        raise RuntimeError(f"No hay modelos activos. Entrene primero: {COMANDO_ENTRENAMIENTO}")
+        raise SinModelos(f"No hay modelos activos. Entrene primero: {COMANDO_ENTRENAMIENTO}")
     return paquetes
