@@ -21,7 +21,7 @@
 \title{\textbf{E12 · Plan de evolución}\\[0.3em]
 \large Frecuencias inteligentes SOBUSA: integración, escalabilidad, costos y riesgos}
 \author{Roger Daza \quad Matteo Del Sole \quad Rafael Romero\\[0.2em]\small Universidad del Norte · Reto Extreme Technologies -- SOBUSA}
-\date{4 de noviembre de 2026}
+\date{7 de noviembre de 2026}
 
 \begin{document}
 \maketitle
@@ -39,7 +39,7 @@ El prototipo funciona de punta a punta con tres rutas (SILENCIO, CRA 54 y CL 72)
   \item Monitorea su propio desempeño y reentrena de forma controlada.
 \end{itemize}
 
-Corre en Docker Compose con 411 pruebas automáticas y un análisis de SonarQube sin hallazgos. Lo que falta para operar no es software sino tres cosas:
+Corre en Docker Compose con 412 pruebas automáticas y un análisis de SonarQube sin hallazgos. Lo que falta para operar no es software sino tres cosas:
 
 \begin{itemize}
   \setlength{\itemsep}{0.1em}
@@ -147,11 +147,11 @@ El valor en pesos depende de si se usa infraestructura propia del operador o un 
 \end{tabular}
 \end{table}
 
-\textbf{Beneficio por verificar en el piloto.} Al recalcular con la función objetivo las 748 horas-ruta del 1 al 14 de diciembre de 2025, la recomendación usa 608 vehículo-horas menos que lo operado en esas dos semanas, unas 43 por día entre las tres rutas.
+\textbf{Beneficio por verificar en el piloto.} Al recalcular con la función objetivo las 666 horas-ruta del 1 al 14 de diciembre de 2025, con los modelos vigentes antes de esas fechas, la recomendación usa 1.002 vehículo-horas menos que lo operado en esas dos semanas, unas 72 por día entre las tres rutas. Una vehículo-hora es un bus por hora durante su tiempo de ciclo.
 
 \begin{itemize}
   \setlength{\itemsep}{0.1em}
-  \item El saldo es neto: CL 72 necesitaría más buses y SILENCIO menos.
+  \item El saldo es neto: CL 72 necesitaría 763 vehículo-horas más y SILENCIO 1.673 menos.
   \item Depende de parámetros todavía sin validar: capacidad, headway máximo y pesos.
 \end{itemize}
 
@@ -173,7 +173,7 @@ Carga sobre la base operacional & Réplica de lectura, consultas por rango index
 Recomendación inviable & Restricciones duras de flota, headway y capacidad; la recomendación se marca \emph{no viable} con el motivo. \\
 Caídas y reinicios & Trabajos con latido, reanudación automática y reintentos, verificados con una caída real de la API. \\
 Exposición de datos & Mínimo privilegio en las dos bases, sin datos personales de conductores, claves con huella, secretos fuera del repositorio. \\
-Dependencia del equipo actual & Manuales técnico, de usuario y de despliegue; 411 pruebas; integración continua con SonarQube; explicación de cada archivo en \cod{comentarios\_codigo.pdf}. \\
+Dependencia del equipo actual & Manuales técnico, de usuario y de despliegue; 412 pruebas; integración continua con SonarQube; explicación de cada archivo en \cod{comentarios\_codigo.pdf}. \\
 Compatibilidad de librerías & Versiones fijadas en \cod{requirements.txt}; la instrumentación de trazas sobre SQLAlchemy 2.1 está cubierta por pruebas. \\
 \bottomrule
 \end{longtable}

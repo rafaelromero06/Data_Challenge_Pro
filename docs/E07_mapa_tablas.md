@@ -34,7 +34,7 @@ La especificación propone `timbradas_consolidado` y `timbradas_segmentos_consol
 
 Los scripts de segmentación del operador no se pueden ejecutar en un acceso de solo lectura, porque escriben en `timbradas_segmentos`. Su lógica se reprodujo en `frecuencias/segmentos/carga.py`, que escribe en `ai_frecuencias.segment_observation`. Coincide en 99,7 % con la salida del operador en los viajes que ambos cubren.
 
-Esta decisión debe validarse con Extreme Technologies (ver [validaciones pendientes](validaciones_pendientes.md)). Si los consolidados se completan, basta con cambiar las consultas de `consultas.py`: el resto del flujo no depende de la tabla de origen.
+Esta decisión debe validarse con Extreme Technologies. Si los consolidados se completan, basta con cambiar las consultas de `consultas.py`: el resto del flujo no depende de la tabla de origen.
 
 ### Campos de la especificación que no se usan
 

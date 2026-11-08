@@ -26,7 +26,7 @@
 \title{\textbf{E02 · Especificación técnica}\\[0.3em]
 \large Frecuencias inteligentes SOBUSA: arquitectura, datos, API y decisiones técnicas}
 \author{Roger Daza \quad Matteo Del Sole \quad Rafael Romero\\[0.2em]\small Universidad del Norte · Reto Extreme Technologies -- SOBUSA}
-\date{Versión del 4 de noviembre de 2026 · esquema \cod{ai\_frecuencias} en la revisión 0011}
+\date{Versión del 7 de noviembre de 2026 · esquema \cod{ai\_frecuencias} en la revisión 0011}
 
 \begin{document}
 \maketitle
@@ -261,13 +261,13 @@ Los cuatro términos están en unidades equivalentes a una hora de operación de
 
 Las horas con menos de 25\,\% dentro de la ventana no se recomiendan, y en la hora parcial los buses operados se comparan como tasa dentro del servicio. Así, después de la última salida el sistema no pide buses por el mínimo de servicio.
 
-\textbf{Pesos y línea base.} Los pesos de referencia son $\alpha = 1$, $\beta = 0{,}1$, $\gamma = 1$ y $\delta = 0{,}5$. Están versionados en \cod{operational\_parameter} y requieren validación de SOBUSA. Con estos valores, recalculando las 748 horas-ruta del 1 al 14 de diciembre de 2025:
+\textbf{Pesos y línea base.} Los pesos de referencia son $\alpha = 1$, $\beta = 0{,}1$, $\gamma = 1$ y $\delta = 0{,}5$. Están versionados en \cod{operational\_parameter} y requieren validación de SOBUSA. Con estos valores, recalculando las 666 horas-ruta del 1 al 14 de diciembre de 2025 con los modelos vigentes antes de esas fechas (\cod{pruebas/redistribucion.py}):
 
 \begin{itemize}
-  \item El óptimo coincide con la línea base de §10.3 ($\lceil$carga p90 / capacidad efectiva$\rceil$ con mínimo de servicio) en el 73\,\% de los casos y recomienda menos buses en el 27\,\%.
-  \item Frente a lo operado, propone 8,4 buses por hora en promedio frente a 8,5.
-  \item La flota se redistribuye: SILENCIO pasa de 7,7 a 6,6 buses por hora y CL 72 de 4,6 a 5,5.
-  \item La mediana de ocupación esperada es 65\,\%.
+  \item El óptimo coincide con la línea base de §10.3 ($\lceil$carga p90 / capacidad efectiva$\rceil$ con mínimo de servicio) en el 66\,\% de los casos y recomienda menos buses en el 34\,\%.
+  \item Frente a lo operado, propone 8,7 buses por hora en promedio frente a 9,1.
+  \item La flota se redistribuye: SILENCIO pasa de 8,4 a 6,8 buses por hora y CL 72 de 4,9 a 5,6.
+  \item La mediana de ocupación esperada es 67\,\%.
 \end{itemize}
 
 \section{Alertas}
@@ -370,7 +370,7 @@ RNF-003 Ingesta & Upsert por lotes con \cod{COPY} a tabla temporal & 808.345 reg
 RNF-004 Asincronía & Ciclo como trabajo con etapa, avance y reintento (API y programador); exclusión entre procesos por índice único & \cod{humo\_docker.json}: 202 y 409 \\
 RNF-005 Escalabilidad & API sin estado de sesión; procesamiento por ruta y fecha & --- \\
 RNF-006 Observabilidad & Logs JSON con \cod{correlation\_id} y \cod{trace\_id}, Prometheus, trazas OpenTelemetry de HTTP, SQL y etapas & \cod{tests/test\_trazas.py} \\
-RNF-007 Mantenibilidad & Arquitectura modular, 411 pruebas, 80\,\% de cobertura & \cod{docs/evidencias/} \cod{reporte-pruebas.xml} \\
+RNF-007 Mantenibilidad & Arquitectura modular, 412 pruebas, 80\,\% de cobertura & \cod{docs/evidencias/} \cod{reporte-pruebas.xml} \\
 RNF-008 Portabilidad & Docker Compose con base, migraciones, API y perfiles & \cod{humo\_docker.json} \\
 RNF-009 Compatibilidad & \cod{/api/v1}, OpenAPI 3.1, 11 migraciones reversibles probadas en CI & \cod{docs/openapi.json} \\
 RNF-010 Resiliencia & Timeout, reintento con espera creciente y circuit breaker en fuente y notificaciones & \cod{tests/test\_resiliencia.py} \\

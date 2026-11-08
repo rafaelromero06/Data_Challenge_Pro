@@ -54,7 +54,7 @@ flowchart LR
 | `frecuencias/observabilidad.py`, `trazas.py`, `resiliencia.py`, `seguridad.py` | Logs JSON, métricas Prometheus, trazas OpenTelemetry, circuit breaker, claves de acceso |
 | `migrations/` | Alembic: 11 migraciones del esquema `ai_frecuencias` |
 | `pruebas/` | Pruebas de carga, volumen, EXPLAIN, humo en Docker, E2E del tablero, informe de SonarQube, paquete y demostración del ciclo, sesgo por segmento e informe de modelos activos |
-| `tests/` | 411 pruebas pytest (unitarias, integración con la base, API, ML, contrato) |
+| `tests/` | 412 pruebas pytest (unitarias, integración con la base, API, ML, contrato) |
 
 ## 2. El ciclo incremental
 
@@ -205,13 +205,14 @@ Valores del último ciclo real con datos hasta diciembre de 2025:
 
 | Nivel | Dónde | Cómo correr |
 |---|---|---|
-| Unitarias, integración, API, ML y contrato | `tests/` (411 pruebas, 80 % de cobertura) | `python -m pytest` (con la base cargada); `-m "not lenta"` omite las que cargan datos y modelos reales |
+| Unitarias, integración, API, ML y contrato | `tests/` (412 pruebas, 80 % de cobertura) | `python -m pytest` (con la base cargada); `-m "not lenta"` omite las que cargan datos y modelos reales |
 | Contrato de la API | `tests/test_contrato.py` | Corre en CI: compara la API con `docs/openapi.json`, los endpoints mínimos de §12.2 y el error uniforme de toda ruta protegida |
 | Carga (RNF-002) | `pruebas/carga_api.py` | Con la API levantada |
 | Volumen (RNF-003) | `pruebas/volumen_ingesta.py` | Base temporal en Docker |
 | Rendimiento SQL | `pruebas/explain_fuente.py` | Contra la base del operador, solo lectura |
 | Humo en Docker | `pruebas/humo_docker.py` | Con `docker compose up` |
 | Ciclo completo (§14.2) | `pruebas/demo_ciclo.py` | Con la API operando; datos nuevos desde `datos/` o desde la base del operador |
+| Redistribución de la flota (E01) | `pruebas/redistribucion.py` | Contra `ai_frecuencias`, solo lectura, con los modelos vigentes antes del periodo |
 | Sesgo por segmento (§9.3) | `pruebas/sesgo_segmentos.py` | Contra `ai_frecuencias`, con cuotas calculadas solo con datos previos a la ventana |
 | E2E del tablero, accesibilidad y modo móvil | `pruebas/e2e_tablero.py` | Playwright con Edge del sistema |
 | Análisis estático | SonarQube | Ver [despliegue §6](manual_despliegue.md#6-integracion-continua-y-sonarqube) |

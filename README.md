@@ -14,7 +14,7 @@ Prototipo para el reto de frecuencias de SOBUSA y Extreme Technologies. Predice 
 - **Pantalla «Hoy».** Muestra, para las tres rutas a la vez, qué hacer en la hora actual y la siguiente en lenguaje operativo («Agregar 2 buses entre 06:15 y 07:15»), la franja del día y las alertas pendientes. Las horas después de la última salida programada aparecen como fuera de servicio y no piden buses.
 - **Ciclo incremental.** Se ejecuta como trabajo con avance, latido, reanudación tras reinicios y reintentos. Monitorea deriva, error y cobertura, y reentrena con comparación campeón/retador.
 - **Calidad del software.**
-  - 411 pruebas, con 80 % de cobertura sobre la base cargada.
+  - 412 pruebas, con 80 % de cobertura sobre la base cargada.
   - SonarQube sin bugs, vulnerabilidades ni code smells.
   - p95 de las consultas paginadas de 146 ms con 10 usuarios concurrentes.
   - Ingesta de 808.345 registros en 149 s, sin duplicados al repetir.
@@ -58,7 +58,7 @@ docker compose --profile calidad up -d          # servidor SonarQube local
 conda create -n frecuencias python=3.12 && conda activate frecuencias
 pip install -r requirements-dev.txt
 docker compose up -d db && python -m alembic upgrade head
-python -m pytest                                  # 411 pruebas, con la base cargada; -m "not lenta" para las rápidas
+python -m pytest                                  # 412 pruebas, con la base cargada; -m "not lenta" para las rápidas
 uvicorn frecuencias.api.main:app --reload
 python -m frecuencias.operacion.ciclo --origen base --dias 1
 ```
@@ -79,7 +79,7 @@ frecuencias/
   tablero/         tablero web
 migrations/        Alembic (0001 a 0011)
 tests/             pruebas pytest
-pruebas/           carga, volumen, EXPLAIN, humo en Docker, E2E, SonarQube, paquete y demo del ciclo, sesgo por segmento
+pruebas/           carga, volumen, EXPLAIN, humo en Docker, E2E, SonarQube, paquete y demo del ciclo, sesgo, redistribución
 docs/              entregables y manuales
 paper/             artículo técnico del modelo
 ```
@@ -88,7 +88,7 @@ paper/             artículo técnico del modelo
 
 | Código | Documento |
 |---|---|
-| E01 | [Documento ejecutivo](docs/E01_documento_ejecutivo.pdf) |
+| E01 | [Documento ejecutivo](docs/E01_documento_ejecutivo.pdf) y [recálculo de la redistribución](docs/evidencias/redistribucion.json) |
 | E02 | [Especificación técnica](docs/E02_especificacion_tecnica.pdf) |
 | E03 | Este repositorio, [`requirements.txt`](requirements.txt), [pruebas](tests/), [reporte de ejecución](docs/evidencias/reporte-pruebas.xml) y [reporte de SonarQube](docs/evidencias/sonarqube.json) |
 | E04 | [Migraciones Alembic](migrations/versions/), con índices y datos semilla |

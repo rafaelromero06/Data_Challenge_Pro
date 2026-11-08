@@ -1,0 +1,107 @@
+{
+ "periodo": [
+  "2025-12-01",
+  "2025-12-15"
+ ],
+ "dias": 14,
+ "metodo": "Mismas referencias que el ciclo (05:00 a 20:00) y primer bloque de cada una; parametros vigentes; operado = salidas observadas en la hora, como tasa en horas parciales; vehiculo-horas = buses por hora x tiempo de ciclo / 60",
+ "modelos": {
+  "30": {
+   "id": 24,
+   "version": "20261029T033100",
+   "estado": "retirado",
+   "data_cutoff": "2025-11-30 04:45:00+00:00"
+  },
+  "60": {
+   "id": 25,
+   "version": "20261029T033100",
+   "estado": "retirado",
+   "data_cutoff": "2025-11-30 04:45:00+00:00"
+  },
+  "120": {
+   "id": 30,
+   "version": "20261029T033100",
+   "estado": "retirado",
+   "data_cutoff": "2025-11-30 04:45:00+00:00"
+  }
+ },
+ "total": {
+  "horas_ruta": 666,
+  "horas_con_oferta_medida": 666,
+  "buses_por_hora_recomendados": 8.73,
+  "buses_por_hora_operados": 9.05,
+  "mediana_ocupacion_esperada": 0.6712,
+  "frente_a_linea_base": {
+   "igual": 0.6607,
+   "menos": 0.3393,
+   "mas": 0.0
+  },
+  "vehiculo_horas": {
+   "recomendadas": 25805,
+   "operadas": 26807,
+   "diferencia": -1002,
+   "diferencia_por_dia": -71.6
+  },
+  "viables": 0.8949
+ },
+ "por_ruta": {
+  "SILENCIO": {
+   "horas_ruta": 222,
+   "horas_con_oferta_medida": 222,
+   "buses_por_hora_recomendados": 6.84,
+   "buses_por_hora_operados": 8.44,
+   "mediana_ocupacion_esperada": 0.6869,
+   "frente_a_linea_base": {
+    "igual": 0.5721,
+    "menos": 0.4279,
+    "mas": 0.0
+   },
+   "vehiculo_horas": {
+    "recomendadas": 7000,
+    "operadas": 8673,
+    "diferencia": -1673,
+    "diferencia_por_dia": -119.5
+   },
+   "viables": 0.7973
+  },
+  "CRA 54": {
+   "horas_ruta": 222,
+   "horas_con_oferta_medida": 222,
+   "buses_por_hora_recomendados": 13.71,
+   "buses_por_hora_operados": 13.78,
+   "mediana_ocupacion_esperada": 0.7104,
+   "frente_a_linea_base": {
+    "igual": 0.5315,
+    "menos": 0.4685,
+    "mas": 0.0
+   },
+   "vehiculo_horas": {
+    "recomendadas": 12888,
+    "operadas": 12979,
+    "diferencia": -91,
+    "diferencia_por_dia": -6.5
+   },
+   "viables": 0.8874
+  },
+  "CL 72": {
+   "horas_ruta": 222,
+   "horas_con_oferta_medida": 222,
+   "buses_por_hora_recomendados": 5.64,
+   "buses_por_hora_operados": 4.93,
+   "mediana_ocupacion_esperada": 0.5388,
+   "frente_a_linea_base": {
+    "igual": 0.8784,
+    "menos": 0.1216,
+    "mas": 0.0
+   },
+   "vehiculo_horas": {
+    "recomendadas": 5917,
+    "operadas": 5154,
+    "diferencia": 763,
+    "diferencia_por_dia": 54.5
+   },
+   "viables": 1.0
+  }
+ },
+ "operado_observado": 1.0
+}

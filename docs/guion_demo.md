@@ -40,7 +40,7 @@ python pruebas/paquete_demo.py importar --archivo paquete_demo/paquete_demo.tar.
 | 2:00–2:30 | Pestaña **Mapa**, hora 07:00 | Cada tramo de 500 metros muestra la ocupación a esa hora. Esto dice dónde se llena el bus, no solo cuándo. |
 | 2:30–3:10 | Pestaña **Alertas**, vista agrupada. Abra una alerta | Hay diez tipos de alerta. Se agrupan para no saturar al operador, y cada una muestra el valor real, el esperado, el umbral y qué hacer. Queda bitácora de quién la gestionó. |
 | 3:10–4:20 | Terminal con `demo_ciclo.py`. Corte a la pestaña **Ejecuciones** y luego a **Modelos** | Llegan tres días nuevos. El ciclo lee solo lo nuevo: 703 franjas y 1.347 viajes, sin tocar la base del operador. Valida la calidad, predice, recomienda y mide su propio error. Luego entrena un candidato por horizonte y lo compara con el modelo activo en cinco días que ninguno usó para entrenar. Aquí los tres quedan rechazados y se conserva el modelo activo, porque un modelo solo se activa si demuestra ser mejor. La decisión queda registrada. |
-| 4:20–4:45 | Diapositiva de ingeniería | Corre con Docker desde un clon limpio, con 411 pruebas y análisis de SonarQube sin hallazgos. La base del operador solo se lee. |
+| 4:20–4:45 | Diapositiva de ingeniería | Corre con Docker desde un clon limpio, con 412 pruebas y análisis de SonarQube sin hallazgos. La base del operador solo se lee. |
 | 4:45–5:00 | Diapositiva de la recomendación | Proponemos un piloto de cuatro semanas en CL 72 y SILENCIO, tras validar capacidad y pesos con operación. |
 
 ## Si algo falla durante la grabación
