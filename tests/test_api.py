@@ -217,21 +217,3 @@ def test_alertas_agrupadas_y_cambio_en_lote_validado(cliente):
     assert vacio.status_code == 422
     sin_permiso = cliente("POST", "/api/v1/alerts/status", json={"ids": [str(uuid.uuid4())]}, rol="lector")
     assert sin_permiso.status_code == 403
-
-
-def test_mapa_de_segmentos_en_geojson(cliente):
-    respuesta = cliente("GET", "/api/v1/segments/map?dayType=habil&hour=7", rol="lector")
-    assert respuesta.status_code == 200
-    mapa = respuesta.json()
-    assert mapa["type"] == "FeatureCollection"
-    assert len(mapa["features"]) > 300
-    geometria = mapa["features"][0]["geometry"]
-    assert geometria["type"] == "LineString"
-    longitud, latitud = geometria["coordinates"][0]
-    assert -75.0 < longitud < -74.7
-    assert 10.8 < latitud < 11.1
-    assert {p["routeId"] for p in mapa["criticalSegments"]} == {2, 16, 21}
-    assert sum(1 for f in mapa["features"] if f["properties"]["critical"]) == 3
-    una = cliente("GET", "/api/v1/segments/map?routeId=16&dayType=dom_fest&hour=20", rol="lector").json()
-    assert {f["properties"]["routeId"] for f in una["features"]} == {16}
-    assert cliente("GET", "/api/v1/segments/map?dayType=lunes", rol="lector").status_code == 422

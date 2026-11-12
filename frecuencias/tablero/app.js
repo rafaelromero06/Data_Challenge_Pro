@@ -123,7 +123,7 @@ function activarPestana(tab, cargar = true) {
   });
   tab.focus();
   const cargas = {
-    "tab-hoy": cargarHoy, "tab-mapa": cargarMapa, "tab-alertas": cargarAlertas, "tab-ejecuciones": cargarEjecuciones,
+    "tab-alertas": cargarAlertas, "tab-ejecuciones": cargarEjecuciones,
     "tab-modelos": () => Promise.all([cargarModelos(), cargarMonitoreo()]), "tab-parametros": cargarParametros,
   };
   if (cargar && cargas[tab.id]) cargas[tab.id]().catch((e) => avisar(e.message, true));
@@ -163,7 +163,7 @@ async function cargarRutas() {
   estado.rutas = await api("/rutas");
   const opciones = estado.rutas.map((r) => `<option value="${r.id_ruta}">${escapar(r.id_ruta)} · ${escapar(r.nombre || "")}</option>`).join("");
   $("pred-ruta").innerHTML = opciones;
-  ["al-ruta", "ex-ruta", "mapa-ruta"].forEach((id) => { $(id).innerHTML = '<option value="">todas</option>' + opciones; });
+  ["al-ruta", "ex-ruta"].forEach((id) => { $(id).innerHTML = '<option value="">todas</option>' + opciones; });
   const ultima = estado.rutas.map((r) => String(r.ultima_franja)).sort((a, b) => a.localeCompare(b)).pop();
   if (ultima) $("pred-referencia").value = `${String(ultima).slice(0, 10)}T06:00`;
 }
@@ -283,181 +283,6 @@ async function calcularPrediccion(evento) {
     $("pred-resultado").hidden = false;
     if (r.saved) avisar(`Guardado en la ejecución ${r.executionId}.`);
   });
-}
-
-const SIMBOLOS = { agregar: "▲", reducir: "▼", mantener: "=", no_viable: "!", programar: "•", sin_dato: "–",
-  fuera_de_servicio: "" };
-
-function textoDia(dia) {
-  const [a, m, d] = String(dia).split("-").map(Number);
-  return new Date(a, m - 1, d).toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
-}
-
-function conteoHoras(conteo) {
-  const nombres = { agregar: "faltan buses", reducir: "sobran buses", mantener: "adecuadas", no_viable: "no viables", sin_dato: "sin dato",
-    programar: "sin oferta actual", fuera_de_servicio: "fuera de servicio" };
-  return Object.entries(conteo).map(([k, n]) => `${n} ${nombres[k] ?? k}`).join(" · ") || "sin recomendaciones";
-}
-
-function tarjetaRuta(r, referencia) {
-  const ahora = r.ahora.inicio;
-  const horas = r.horas.map((h) => `<li class="h h-${escapar(h.accion)}${h.inicio === ahora ? " h-actual-ahora" : ""}" title="${escapar(h.texto)}">
-      <span class="h-hora">${hora(h.inicio)}</span><strong aria-hidden="true">${h.accion === "fuera_de_servicio" ? "–" : h.recomendados}</strong>
-      <span class="h-actual" aria-hidden="true">${h.actuales === null ? "–" : numero(h.actuales, 0)} ${SIMBOLOS[h.accion] ?? ""}</span>
-      <span class="sr">${escapar(h.texto)}</span></li>`).join("");
-  const alertas = r.alertas.principales.map((a) => `<li>${etiqueta(a.severidad)} ${escapar(a.codigo)}${a.inicio ? " " + hora(a.inicio) : ""}: ${escapar(a.explicacion)}</li>`).join("");
-  return `<article class="tarjeta ruta-hoy">
-    <h3>${escapar(r.routeName || "Ruta " + r.routeId)} <span class="sub">ruta ${escapar(r.routeId)}</span></h3>
-    <p class="accion a-${escapar(r.ahora.tipo)}"><strong>Ahora:</strong> ${escapar(r.ahora.texto)}</p>
-    <p class="accion a-${escapar(r.siguiente.tipo)}"><strong>Después:</strong> ${escapar(r.siguiente.texto)}</p>
-    <ol class="franja-horas" aria-label="Recomendación por hora de ${escapar(r.routeName || r.routeId)}">${horas || "<li>Sin recomendaciones para este día</li>"}</ol>
-    <dl class="cifras">
-      <dt>Despachos</dt><dd>${r.servicio ? `de ${hora(r.servicio.apertura)} a ${hora(r.servicio.cierre)}` : "sin programación"}</dd>
-      <dt>Horas del día</dt><dd>${escapar(conteoHoras(r.conteo))}</dd>
-      <dt>Alertas pendientes</dt><dd>${r.alertas.abiertas} (${r.alertas.criticas} críticas) · ${r.alertas.delDia} de este día</dd>
-    </dl>
-    ${alertas ? `<ul class="alertas-dia">${alertas}</ul>` : ""}
-    <div class="acciones">
-      <button type="button" data-prediccion="${r.routeId}" data-referencia="${escapar(String(referencia).slice(0, 16))}">Ver predicción de esta hora</button>
-      <button type="button" data-alertas="${r.routeId}">Ver alertas de la ruta</button>
-      <button type="button" data-mapa="${r.routeId}">Ver en el mapa</button>
-    </div>
-  </article>`;
-}
-
-async function cargarHoy(evento) {
-  evento?.preventDefault();
-  const filtros = new URLSearchParams();
-  if ($("hoy-dia").value) filtros.set("day", $("hoy-dia").value);
-  if ($("hoy-dia").value && $("hoy-hora").value) filtros.set("at", `${$("hoy-dia").value}T${$("hoy-hora").value}`);
-  const r = await api(`/overview?${filtros}`);
-  $("hoy-dia").value = r.dia;
-  $("hoy-hora").value = String(r.referencia).slice(11, 16);
-  $("hoy-resumen").textContent = `Situación del ${textoDia(r.dia)} a las ${String(r.referencia).slice(11, 16)} · último dato recibido: ${fecha(r.ultimoDato)}`;
-  $("hoy-rutas").innerHTML = r.rutas.map((ruta) => tarjetaRuta(ruta, r.referencia)).join("");
-  $("hoy-rutas").querySelectorAll("[data-prediccion]").forEach((b) => b.addEventListener("click", () => {
-    $("pred-ruta").value = b.dataset.prediccion;
-    $("pred-referencia").value = b.dataset.referencia;
-    activarPestana($("tab-prediccion"));
-    $("form-prediccion").requestSubmit();
-  }));
-  $("hoy-rutas").querySelectorAll("[data-mapa]").forEach((b) => b.addEventListener("click", () => {
-    $("mapa-ruta").value = b.dataset.mapa;
-    $("mapa-tipo").value = r.tipoDia;
-    $("mapa-hora").value = String(Math.min(Math.max(Number(String(r.referencia).slice(11, 13)), 5), 20));
-    activarPestana($("tab-mapa"));
-  }));
-  $("hoy-rutas").querySelectorAll("[data-alertas]").forEach((b) => b.addEventListener("click", () => {
-    $("al-ruta").value = b.dataset.alertas;
-    estado.filtroGrupo = null;
-    cambiarVistaAlertas("grupos", false);
-    activarPestana($("tab-alertas"));
-  }));
-}
-
-const COLORES_RUTA = { 2: "#1f5fbf", 16: "#c2410c", 21: "#7c3aed" };
-const NIVELES_OCUPACION = [
-  { desde: 0.9, color: "#b91c1c", texto: "de 90 % o más" },
-  { desde: 0.65, color: "#d97706", texto: "de 65 % a 90 %" },
-  { desde: 0, color: "#15803d", texto: "menor a 65 %" },
-];
-const SIN_DATO = "#9ca3af";
-const CENTRO_BARRANQUILLA = [10.97, -74.81];
-const mapaEstado = { mapa: null, capa: null, criticos: null, capas: {} };
-
-function colorOcupacion(ocupacion) {
-  if (ocupacion === null || ocupacion === undefined) return SIN_DATO;
-  return NIVELES_OCUPACION.find((n) => ocupacion >= n.desde).color;
-}
-
-function textoSegmento(p) {
-  const carga = p.loadP90 === null ? "sin viajes observados a esta hora"
-    : `carga p90 de ${numero(p.loadP90, 0)} pasajeros por bus (${porcentaje(p.occupancyP90)} de la capacidad) en ${p.tripsObserved} viajes`;
-  return `${p.routeName || "Ruta " + p.routeId} · segmento ${p.segmentNumber} (km ${numero(p.fromKm)} a ${numero(p.toKm)}): ${carga}${p.critical ? " · tramo más cargado" : ""}`;
-}
-
-function leyendaMapa(porRuta, datos) {
-  const nombres = new Map(datos.features.map((f) => [f.properties.routeId, f.properties.routeName || `Ruta ${f.properties.routeId}`]));
-  const items = porRuta
-    ? [...nombres].map(([id, nombre]) => `<li><span class="m" style="background:${COLORES_RUTA[id] ?? SIN_DATO}"></span>${escapar(nombre)}</li>`)
-    : NIVELES_OCUPACION.map((n) => `<li><span class="m" style="background:${n.color}"></span>Ocupación p90 ${n.texto}</li>`)
-      .concat(`<li><span class="m" style="background:${SIN_DATO}"></span>Sin viajes observados</li>`);
-  items.push('<li><span class="m m-critico"></span>Tramo más cargado de cada ruta</li>');
-  $("mapa-leyenda").innerHTML = items.join("");
-}
-
-function dibujarMapa(datos) {
-  if (typeof L === "undefined") {
-    $("mapa").innerHTML = '<p class="nota">No se pudo cargar el mapa base: el navegador necesita conexión a internet para Leaflet y OpenStreetMap. La tabla de abajo tiene los mismos datos.</p>';
-    return;
-  }
-  if (!mapaEstado.mapa) {
-    $("mapa").innerHTML = "";
-    mapaEstado.mapa = L.map("mapa", { scrollWheelZoom: false }).setView(CENTRO_BARRANQUILLA, 12);
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    }).addTo(mapaEstado.mapa);
-  }
-  mapaEstado.mapa.invalidateSize();
-  mapaEstado.capa?.remove();
-  mapaEstado.criticos?.remove();
-  mapaEstado.capas = {};
-  const porRuta = !$("mapa-ruta").value;
-  mapaEstado.capa = L.geoJSON(datos, {
-    style: (f) => ({ color: porRuta ? COLORES_RUTA[f.properties.routeId] ?? SIN_DATO : colorOcupacion(f.properties.occupancyP90),
-      weight: porRuta ? 4 : 6, opacity: 0.85 }),
-    onEachFeature: (f, capa) => {
-      capa.bindTooltip(escapar(textoSegmento(f.properties)), { sticky: true });
-      mapaEstado.capas[f.properties.segmentId] = capa;
-    },
-  }).addTo(mapaEstado.mapa);
-  const marcas = datos.criticalSegments.filter((p) => mapaEstado.capas[p.segmentId]).map((p) => L.circleMarker(
-    mapaEstado.capas[p.segmentId].getBounds().getCenter(),
-    { radius: 9, color: "#111827", weight: 3, fillColor: COLORES_RUTA[p.routeId] ?? SIN_DATO, fillOpacity: 1 },
-  ).bindTooltip(escapar(`Tramo más cargado de ${p.routeName || "la ruta " + p.routeId}: km ${numero(p.fromKm)} a ${numero(p.toKm)}, ocupación p90 de ${porcentaje(p.occupancyP90)}`)));
-  mapaEstado.criticos = L.layerGroup(marcas).addTo(mapaEstado.mapa);
-  if (datos.features.length) mapaEstado.mapa.fitBounds(mapaEstado.capa.getBounds(), { padding: [16, 16] });
-  leyendaMapa(porRuta, datos);
-}
-
-const SEGMENTOS_POR_RUTA = 4;
-
-function masCargados(datos) {
-  const conDatos = datos.features.map((f) => f.properties).filter((p) => p.loadP90 !== null)
-    .sort((a, b) => b.loadP90 - a.loadP90);
-  if ($("mapa-ruta").value) return conDatos.slice(0, 12);
-  const rutas = [...new Set(conDatos.map((p) => p.routeId))];
-  return rutas.flatMap((r) => conDatos.filter((p) => p.routeId === r).slice(0, SEGMENTOS_POR_RUTA));
-}
-
-function tablaMapa(datos) {
-  const filas = masCargados(datos);
-  tabla($("mapa-tabla"), [
-    { titulo: "Ruta", valor: (p) => p.routeName || p.routeId },
-    { titulo: "Segmento", valor: (p) => p.segmentNumber, num: true },
-    { titulo: "Tramo", valor: (p) => `km ${numero(p.fromKm)} a ${numero(p.toKm)}` },
-    { titulo: "Carga p90", valor: (p) => numero(p.loadP90, 0), num: true },
-    { titulo: "Ocupación p90", valor: (p) => porcentaje(p.occupancyP90), num: true },
-    { titulo: "Viajes observados", valor: (p) => p.tripsObserved, num: true },
-  ], filas, (p) => {
-    const capa = mapaEstado.capas[p.segmentId];
-    if (!capa || !mapaEstado.mapa) return;
-    $("mapa").scrollIntoView({ behavior: "smooth", block: "nearest" });
-    mapaEstado.mapa.fitBounds(capa.getBounds(), { maxZoom: 16 });
-    capa.openTooltip();
-  });
-}
-
-async function cargarMapa(evento) {
-  evento?.preventDefault();
-  const filtros = new URLSearchParams({ dayType: $("mapa-tipo").value, hour: $("mapa-hora").value });
-  if ($("mapa-ruta").value) filtros.set("routeId", $("mapa-ruta").value);
-  const datos = await api(`/segments/map?${filtros}`);
-  $("mapa-resumen").textContent = `Carga por segmento en día ${$("mapa-tipo").selectedOptions[0].textContent} a las `
-    + `${$("mapa-hora").selectedOptions[0].textContent}, según los viajes observados (${datos.features.length} segmentos). `
-    + "Pase el mouse sobre un tramo para ver su detalle.";
-  dibujarMapa(datos);
-  tablaMapa(datos);
 }
 
 function filtrosAlertas(pagina) {
@@ -780,19 +605,14 @@ async function usarClave(evento) {
   await conBoton(evento.submitter || evento.target.querySelector("button"), async () => {
     await cargarRutas();
     $("clave-estado").textContent = "Clave aceptada.";
-    if ($("tab-hoy").getAttribute("aria-selected") === "true") await cargarHoy();
   });
   if (!estado.rutas.length) $("clave-estado").textContent = "";
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
   iniciarPestanas();
-  $("mapa-hora").innerHTML = Array.from({ length: 16 }, (_, i) => i + 5)
-    .map((h) => `<option value="${h}"${h === 7 ? " selected" : ""}>${String(h).padStart(2, "0")}:00</option>`).join("");
   $("form-prediccion").addEventListener("submit", calcularPrediccion);
   $("form-alertas").addEventListener("submit", (e) => { e.preventDefault(); estado.filtroGrupo = null; cargarAlertas(1).catch((x) => avisar(x.message, true)); });
-  $("form-hoy").addEventListener("submit", (e) => cargarHoy(e).catch((x) => avisar(x.message, true)));
-  $("form-mapa").addEventListener("submit", (e) => cargarMapa(e).catch((x) => avisar(x.message, true)));
   $("form-lote").addEventListener("submit", aplicarLote);
   $("al-vista-grupos").addEventListener("click", () => { estado.filtroGrupo = null; cambiarVistaAlertas("grupos"); });
   $("al-vista-lista").addEventListener("click", () => cambiarVistaAlertas("lista"));
@@ -810,7 +630,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   try {
     await cargarRutas();
     if (leerClave()) $("clave-estado").textContent = "Clave aceptada.";
-    await cargarHoy();
   } catch (error) {
     avisar(error.message, true);
   }

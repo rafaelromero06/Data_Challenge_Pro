@@ -2,25 +2,6 @@
  "errores_consola": [],
  "pasos": {
   "sin_clave_pide_clave": true,
-  "hoy": {
-   "rutas": 3,
-   "horas": 48,
-   "acciones": 6,
-   "resumen": "Situación del jueves, 18 de diciembre de 2025 a las 06:00 · último dato recibido: 18/12/2025 23:45"
-  },
-  "mapa_ruta": {
-   "ruta": "16",
-   "tipo_dia": "habil",
-   "hora": "6",
-   "tramos": 124,
-   "teselas": 18,
-   "filas_tabla": 12
-  },
-  "mapa_todas": {
-   "tramos": 389,
-   "leyenda": 4
-  },
-  "hoy_a_alertas_de_la_ruta": "2",
   "prediccion": {
    "puntos_grafico": 8,
    "filas_tabla": 8,
@@ -45,7 +26,7 @@
   "monitoreo": 12,
   "botones_reintento": 1,
   "exportacion": {
-   "archivo": "alerts-20261105T040449Z.csv",
+   "archivo": "alerts-20261112T225850Z.csv",
    "bytes": 1077578
   }
  },

@@ -120,10 +120,6 @@ Dentro de Docker, antepóngales `docker compose exec api`. La clave se muestra u
 
 Use un solo programador por base: el índice único de ciclos en curso impide que dos ciclos corran a la vez, pero dos programadores duplicarían intentos. La API corre con un solo proceso de uvicorn, porque la recuperación al arrancar asume una instancia de API por host.
 
-### Red para el mapa
-
-El mapa del tablero se dibuja en el navegador del usuario, no en el servidor. El equipo de quien abre el tablero necesita salida a `https://unpkg.com` (Leaflet) y a `https://tile.openstreetmap.org` (teselas). Si una política de red lo impide, el resto del tablero funciona y el mapa muestra un aviso. Para un uso intensivo conviene un servidor de teselas propio o contratado, según la política de uso de OpenStreetMap.
-
 ## 5. Operación diaria
 
 - **Salud:** `GET /api/v1/salud`, que muestra modelos en memoria, último dato, ciclo en curso y revisión del esquema; métricas en `GET /metrics`.

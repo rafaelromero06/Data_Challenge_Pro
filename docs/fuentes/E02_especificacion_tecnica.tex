@@ -302,7 +302,7 @@ Cada alerta guarda empresa, ruta, ventana, horizonte, valor observado, esperado 
 
 ALT-006 da unas 4 alertas diarias entre las tres rutas con los datos de diciembre de 2025.
 
-Para no saturar al operador, el tablero agrupa las alertas por ruta, código y día (en la demostración, 775 pendientes caben en 178 grupos) y permite gestionarlas en lote. El tablero incluye un mapa de Barranquilla (Leaflet y OpenStreetMap) con los segmentos coloreados por ocupación p90 y el tramo crítico de cada ruta. La pantalla inicial \emph{Hoy} traduce la recomendación vigente de cada ruta a una acción en lenguaje operativo (por ejemplo, ``Agregar 2 buses entre 06:15 y 07:15: de 10 a 12 por hora'') sin recalcular, a partir de lo que el ciclo ya guardó.
+Para no saturar al operador, el tablero agrupa las alertas por ruta, código y día (en la demostración, 775 pendientes caben en 178 grupos) y permite gestionarlas en lote.
 
 \section{API REST}
 
@@ -317,7 +317,7 @@ Para no saturar al operador, el tablero agrupa las alertas por ruta, código y d
   \item Swagger UI restringido por ambiente.
 \end{itemize}
 
-El contrato completo está en \cod{docs/openapi.json} (OpenAPI 3.1, 29 rutas).
+El contrato completo está en \cod{docs/openapi.json} (OpenAPI 3.1, 28 rutas).
 
 \begin{longtable}{@{}p{0.44\textwidth}p{0.12\textwidth}p{0.38\textwidth}@{}}
 \caption{Endpoints.}\\
@@ -336,7 +336,7 @@ El contrato completo está en \cod{docs/openapi.json} (OpenAPI 3.1, 29 rutas).
 \cod{GET /predictions[/\{id\}/segments]} & lector & Pronósticos por filtros; desagregación por segmento \\
 \cod{POST /recommendations/calculate} & operador & Frecuencia y flota optimizadas \\
 \cod{GET /recommendations} & lector & Recomendaciones por filtros \\
-\cod{GET /overview} & lector & Pantalla \emph{Hoy}: acción por ruta para la hora actual y la siguiente, franja del día y alertas \\
+\cod{GET /overview} & lector & Resumen del día: acción por ruta para la hora actual y la siguiente, franja del día y alertas \\
 \cod{GET /alerts[/summary|/\{id\}]} & lector & Alertas por estado, severidad, código, ruta, fecha y ventana \\
 \cod{GET /alerts/groups} & lector & Alertas agrupadas por ruta, código, severidad y día \\
 \cod{POST /alerts/status} & operador & Cambio de estado en lote (hasta 500), con bitácora por alerta \\
@@ -345,7 +345,6 @@ El contrato completo está en \cod{docs/openapi.json} (OpenAPI 3.1, 29 rutas).
 \cod{GET /monitoring[/history]} & lector & Métricas de monitoreo vigentes e histórico \\
 \cod{GET /parameters} · \cod{PUT /parameters/\{clave\}} & lector · admin. & Umbrales y pesos versionados \\
 \cod{GET /segments[/profile]} & lector & Catálogo y perfil de carga por segmento \\
-\cod{GET /segments/map} & lector & GeoJSON del mapa: segmentos con carga y ocupación p90, tramo crítico por ruta \\
 \cod{GET /data-quality} · \cod{GET /notifications} & lector & Problemas de calidad por lote; envíos \\
 \cod{GET /export/\{recurso\}} & lector & CSV o XLSX filtrado \\
 \cod{GET /salud} · \cod{GET /metrics} & público & Salud y métricas Prometheus \\
@@ -370,7 +369,7 @@ RNF-003 Ingesta & Upsert por lotes con \cod{COPY} a tabla temporal & 808.345 reg
 RNF-004 Asincronía & Ciclo como trabajo con etapa, avance y reintento (API y programador); exclusión entre procesos por índice único & \cod{humo\_docker.json}: 202 y 409 \\
 RNF-005 Escalabilidad & API sin estado de sesión; procesamiento por ruta y fecha & --- \\
 RNF-006 Observabilidad & Logs JSON con \cod{correlation\_id} y \cod{trace\_id}, Prometheus, trazas OpenTelemetry de HTTP, SQL y etapas & \cod{tests/test\_trazas.py} \\
-RNF-007 Mantenibilidad & Arquitectura modular, 412 pruebas, 80\,\% de cobertura & \cod{docs/evidencias/} \cod{reporte-pruebas.xml} \\
+RNF-007 Mantenibilidad & Arquitectura modular, 410 pruebas, 80\,\% de cobertura & \cod{docs/evidencias/} \cod{reporte-pruebas.xml} \\
 RNF-008 Portabilidad & Docker Compose con base, migraciones, API y perfiles & \cod{humo\_docker.json} \\
 RNF-009 Compatibilidad & \cod{/api/v1}, OpenAPI 3.1, 11 migraciones reversibles probadas en CI & \cod{docs/openapi.json} \\
 RNF-010 Resiliencia & Timeout, reintento con espera creciente y circuit breaker en fuente y notificaciones & \cod{tests/test\_resiliencia.py} \\

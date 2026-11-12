@@ -24,7 +24,7 @@
   }
  ],
  "medidas": {
-  "coverage": "80.4",
+  "coverage": "80.3",
   "reliability_rating": "1.0",
   "code_smells": "0",
   "duplicated_lines_density": "0.3",
@@ -34,7 +34,7 @@
   "sqale_rating": "1.0",
   "bugs": "0",
   "software_quality_low_issues": "0",
-  "ncloc": "8179",
+  "ncloc": "7858",
   "software_quality_blocker_issues": "0",
   "vulnerabilities": "0",
   "software_quality_medium_issues": "0"

@@ -1,19 +1,13 @@
 import json
 
 import pandas as pd
-from sqlalchemy import and_, func, select
+from sqlalchemy import func, select
 from sqlalchemy.engine import Connection
 
-from frecuencias.config import NOMBRES_RUTAS
-from frecuencias.optimizacion.parametros import TIPOS_DIA, parametros_hora, tipo_dia_de
+from frecuencias.optimizacion.parametros import parametros_hora, tipo_dia_de
 from frecuencias.persistencia import parametros
 from frecuencias.persistencia.tablas import instantanea, perfil_segmento, prediccion, segmento
 from frecuencias.tiempo import a_local
-
-
-TOLERANCIA_MAPA_GRADOS = 0.00005
-DECIMALES_MAPA = 5
-CODIGOS_TIPO_DIA = {nombre: codigo for codigo, nombre in TIPOS_DIA.items()}
 
 
 def _flotante(valor) -> float | None:
@@ -33,49 +27,6 @@ def catalogo(conn: Connection, id_ruta: int | None = None, con_geometria: bool =
         if "geojson" in fila:
             fila["geometria"] = json.loads(fila.pop("geojson"))
     return filas
-
-
-def _propiedades(f: dict, capacidad: float | None, nombres: dict) -> dict:
-    carga = _flotante(f["carga_p90"])
-    return {"routeId": f["id_ruta"], "routeName": nombres.get(f["id_ruta"]), "segmentId": f["id_segmento"],
-            "segmentNumber": f["nro_segmento"], "fromKm": round(float(f["inicio_m"]) / 1000, 2),
-            "toKm": round((float(f["inicio_m"]) + float(f["longitud_m"])) / 1000, 2), "loadP90": carga,
-            "loadMean": _flotante(f["carga_prom"]), "boardingsMean": _flotante(f["subidas_prom"]),
-            "tripsObserved": f["nro_viajes"],
-            "occupancyP90": round(carga / capacidad, 3) if carga is not None and capacidad else None,
-            "critical": False}
-
-
-def mapa(conn: Connection, tipo_dia: str, hora: int, id_ruta: int | None = None,
-         nombres: dict | None = None) -> dict:
-    nombres = nombres or NOMBRES_RUTAS
-    union = and_(perfil_segmento.c.id_segmento == segmento.c.id_segmento, perfil_segmento.c.tipo_dia == tipo_dia,
-                 perfil_segmento.c.hora == hora)
-    consulta = (select(segmento.c.id_segmento, segmento.c.id_ruta, segmento.c.nro_segmento, segmento.c.inicio_m,
-                       segmento.c.longitud_m, perfil_segmento.c.carga_p90, perfil_segmento.c.carga_prom,
-                       perfil_segmento.c.subidas_prom, perfil_segmento.c.nro_viajes,
-                       func.ST_AsGeoJSON(func.ST_Simplify(segmento.c.geom, TOLERANCIA_MAPA_GRADOS),
-                                         DECIMALES_MAPA).label("geojson"))
-                .select_from(segmento.outerjoin(perfil_segmento, union))
-                .order_by(segmento.c.id_ruta, segmento.c.nro_segmento))
-    if id_ruta is not None:
-        consulta = consulta.where(segmento.c.id_ruta == id_ruta)
-    filas = [dict(f) for f in conn.execute(consulta).mappings()]
-    capacidades = {r: parametros_hora(parametros.vigentes(conn, r), hora, CODIGOS_TIPO_DIA[tipo_dia]).capacidad
-                   for r in {f["id_ruta"] for f in filas}}
-    rasgos = [{"type": "Feature", "geometry": json.loads(f["geojson"]),
-               "properties": _propiedades(f, capacidades[f["id_ruta"]], nombres)} for f in filas]
-    criticos = {}
-    for rasgo in rasgos:
-        p = rasgo["properties"]
-        actual = criticos.get(p["routeId"])
-        if p["loadP90"] is not None and (actual is None or p["loadP90"] > actual["loadP90"]):
-            criticos[p["routeId"]] = p
-    for p in criticos.values():
-        p["critical"] = True
-    return {"type": "FeatureCollection", "features": rasgos, "dayType": tipo_dia, "hour": hora,
-            "capacity": {str(r): c for r, c in capacidades.items()},
-            "criticalSegments": [dict(p) for p in criticos.values()]}
 
 
 def perfil(conn: Connection, id_ruta: int, tipo_dia: str, hora: int) -> list[dict]:

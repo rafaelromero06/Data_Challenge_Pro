@@ -15,56 +15,11 @@ El tablero se abre en `http://<servidor>:8000/`, funciona en computador y en cel
 | Operador | Lo anterior, más calcular predicciones, lanzar o reintentar ciclos y gestionar alertas |
 | Administrador | Lo anterior, más activar modelos y cambiar parámetros |
 
-## 2. Hoy: qué hacer en cada ruta
-
-![Pantalla Hoy](img/0-hoy.png)
-
-Es la pantalla inicial. Muestra las tres rutas a la vez, con lo que el sistema ya calculó en el último ciclo, así que carga al instante.
-
-- **Día y hora de referencia.** Por defecto es el momento actual. Con los datos de demostración, que terminan en diciembre de 2025, es el último día con datos a las 6:00. Puede elegir otro día u otra hora y pulsar **Ver**.
-- **Ahora y Después.** Indican qué hacer en la hora en curso y en la siguiente, en lenguaje operativo:
-  - *Agregar 2 buses entre 06:15 y 07:15: de 10 a 12 por hora*;
-  - *Se pueden retirar 3 buses…*;
-  - *Mantener…*.
-
-  El color del borde dice si faltan buses (rojo), sobran (ámbar) o la oferta es adecuada (verde).
-- **Franja del día.** Una casilla por hora:
-  - número grande: buses recomendados;
-  - número pequeño y flecha: buses operados (▲ faltan, ▼ sobran, = igual);
-  - la casilla con contorno azul es la hora de referencia.
-
-  Al pasar el mouse sobre una casilla, o con un lector de pantalla, se lee la recomendación completa.
-- **Despachos.** Muestra el horario de despachos de la ruta ese día, de la primera a la última salida programada (o la habitual de las 4 semanas previas). Las horas fuera de ese horario aparecen en gris como *fuera de servicio*: no se recomiendan salidas cuando la ruta ya cerró. En la última hora de servicio, que suele quedar a medias, los buses operados se cuentan como tasa por hora dentro del servicio para compararlos bien con la recomendación.
-- **Horas del día y alertas pendientes.** Cuántas horas tienen déficit o exceso, cuántas alertas siguen pendientes en la ruta (y cuántas son críticas) y las tres más importantes del día.
-- **Ver predicción de esta hora.** Abre la pestaña *Predicción* con la ruta y la hora ya puestas y calcula el detalle.
-- **Ver alertas de la ruta.** Abre *Alertas* agrupadas, filtradas por esa ruta.
-- **Ver en el mapa.** Abre el *Mapa* con la ruta, el tipo de día y la hora de referencia.
-
-## 3. Mapa
-
-![Mapa de Barranquilla con las tres rutas](img/6-mapa.png)
-
-Muestra el recorrido de las rutas sobre el mapa de Barranquilla (OpenStreetMap), dividido en tramos de 500 m.
-
-- **Filtros.** Elija la ruta, el tipo de día (hábil, sábado, domingo o festivo) y la hora, y pulse **Ver**.
-- **Con todas las rutas**, cada ruta tiene su color.
-- **Con una sola ruta**, cada tramo se colorea según qué tan lleno va el bus en ese punto: el percentil 90 de la carga a bordo frente a la capacidad.
-  - verde: menos de 65 %;
-  - ámbar: de 65 % a 90 %;
-  - rojo: 90 % o más;
-  - gris: sin viajes observados a esa hora.
-- **Tramo más cargado.** Cada ruta lo tiene marcado con un círculo.
-- **Detalle.** Al pasar el mouse sobre un tramo se ve la ruta, el segmento, el kilómetro, la carga, la ocupación y cuántos viajes la respaldan.
-
-![Mapa de una ruta coloreado por ocupación](img/6b-mapa-ruta.png)
-
-Debajo del mapa, la tabla **Segmentos más cargados** tiene los mismos datos en texto, útil con lector de pantalla. Al seleccionar una fila, el mapa se acerca a ese tramo.
-
-El mapa base se descarga de internet (Leaflet desde unpkg.com y las teselas desde tile.openstreetmap.org). Sin conexión, el tablero lo avisa y la tabla sigue funcionando.
-
-## 4. Predicción y recomendación
+## 2. Predicción y recomendación
 
 ![Pestaña de predicción](img/1-prediccion.png)
+
+Es la pantalla inicial.
 
 1. Elija la **ruta** y la **hora de referencia** (hora de Colombia). Si la deja vacía, se usa el último dato disponible.
 2. Marque **Guardar en ai_frecuencias** si quiere que la predicción y sus alertas queden registradas; sin marcar, es solo una consulta.
@@ -94,7 +49,7 @@ Cómo leer el resultado:
   - La etiqueta **no viable** indica que la demanda no se puede atender con las restricciones configuradas; la tarjeta explica por qué.
 - **Detalle por franja.** Predicción, intervalo, observado, promedio de 4 semanas y las variables que más pesaron en cada predicción (por ejemplo, *hora del día +38 %*).
 
-## 5. Alertas
+## 3. Alertas
 
 ![Alertas agrupadas](img/2b-alertas-agrupadas.png)
 
@@ -135,7 +90,7 @@ Descarte una alerta, sola o en lote, solo cuando no corresponda a un problema re
 | ALT-009 | Faltan datos o llegan atrasados | Reprocesar o restablecer la fuente |
 | ALT-010 | El modelo se degradó: error alto o intervalo mal calibrado | El sistema reentrena; el administrador puede revertir el modelo |
 
-## 6. Ejecuciones
+## 4. Ejecuciones
 
 Muestra cada lectura de datos y cada ciclo con su estado, etapa, avance, intento, ventana de datos y error.
 
@@ -143,7 +98,7 @@ Muestra cada lectura de datos y cada ciclo con su estado, etapa, avance, intento
 - **Reintentar.** Un ciclo *fallida* o *interrumpida* (por ejemplo, porque se reinició el servidor) muestra el botón **Reintentar**. El reintento retoma los datos pendientes y queda enlazado con el original.
 - Al seleccionar una fila se ve el detalle completo: datos leídos, alertas generadas, monitoreo y decisión de reentrenamiento.
 
-## 7. Modelos y monitoreo
+## 5. Modelos y monitoreo
 
 ![Pestaña de modelos y monitoreo](img/3-modelos.png)
 
@@ -157,15 +112,15 @@ Muestra cada lectura de datos y cada ciclo con su estado, etapa, avance, intento
 
   El estado *ok* está bien, *alerta* exige atención y *sin datos* indica que aún no hay muestra suficiente.
 
-## 8. Parámetros
+## 6. Parámetros
 
 Lista los umbrales y pesos vigentes, con unidad, descripción y versión: ocupación objetivo y crítica, capacidad, headways, tolerancias de alertas, pesos de la función objetivo y umbrales de monitoreo. Un administrador puede publicar un valor nuevo, general o para una ruta. La versión anterior se conserva y el cambio rige desde el siguiente cálculo, sin reiniciar nada.
 
-## 9. Exportar
+## 7. Exportar
 
 Elija el recurso (predicciones, recomendaciones, alertas, ejecuciones o calidad de datos), los filtros y el formato **CSV** o **Excel**, y pulse **Exportar**.
 
-## 10. Accesibilidad
+## 8. Accesibilidad
 
 - **Teclado.** Las flechas izquierda y derecha cambian de pestaña; *Inicio* y *Fin* van a la primera y a la última; *Enter* abre la fila seleccionada.
 - **Contraste.** Es de 5,7:1 o más en modo claro y oscuro (WCAG AA).

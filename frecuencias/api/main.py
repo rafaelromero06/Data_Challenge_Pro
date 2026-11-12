@@ -463,13 +463,6 @@ def listar_segmentos(routeId: int | None = None, geometry: bool = False):
         return segmentos_consultas.catalogo(conn, routeId, geometry)
 
 
-@router.get("/segments/map", dependencies=[Depends(LECTOR)])
-def mapa_de_segmentos(dayType: Literal["habil", "sabado", "dom_fest"] = "habil", hour: int = Query(7, ge=0, le=23),
-                      routeId: int | None = None):
-    with _motor().connect() as conn:
-        return segmentos_consultas.mapa(conn, dayType, hour, routeId, _vista()["nombres"])
-
-
 @router.get("/segments/profile", dependencies=[Depends(LECTOR)])
 def perfil_por_segmento(routeId: int, dayType: Literal["habil", "sabado", "dom_fest"] = "habil",
                         hour: int = Query(7, ge=0, le=23)):

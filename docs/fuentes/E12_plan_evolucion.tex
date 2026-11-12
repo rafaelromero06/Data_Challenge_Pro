@@ -39,7 +39,7 @@ El prototipo funciona de punta a punta con tres rutas (SILENCIO, CRA 54 y CL 72)
   \item Monitorea su propio desempeño y reentrena de forma controlada.
 \end{itemize}
 
-Corre en Docker Compose con 412 pruebas automáticas y un análisis de SonarQube sin hallazgos. Lo que falta para operar no es software sino tres cosas:
+Corre en Docker Compose con 410 pruebas automáticas y un análisis de SonarQube sin hallazgos. Lo que falta para operar no es software sino tres cosas:
 
 \begin{itemize}
   \setlength{\itemsep}{0.1em}
@@ -63,7 +63,7 @@ Capacidad real por tipología de bus, headway máximo por ruta y franja, flota d
 Parámetros marcados como validados en \cod{operational\_parameter}. Ciclo horario 7 días seguidos sin intervención manual. \\
 \addlinespace
 1. Piloto consultivo & 4 semanas &
-CL 72 y SILENCIO, las rutas con mayor diferencia entre lo operado y lo recomendado. Los despachadores usan la pantalla \emph{Hoy} y gestionan alertas agrupadas. La decisión sigue siendo humana; se registra si se siguió la recomendación. &
+CL 72 y SILENCIO, las rutas con mayor diferencia entre lo operado y lo recomendado. Los despachadores consultan la recomendación en el tablero y gestionan alertas agrupadas. La decisión sigue siendo humana; se registra si se siguió la recomendación. &
 Indicadores de la Sección~\ref{sec:indicadores} iguales o mejores que las mismas semanas del año anterior. Alertas descartadas bajo 30\,\%. \\
 \addlinespace
 2. Producción & 6--8 semanas &
@@ -112,7 +112,7 @@ Ingesta & 808.345 registros en 149 s, pico de 964 MB & Procesar por ruta y fecha
 Entrenamiento completo & 37 min (3 horizontes, 15 intentos de Optuna) en un equipo de desarrollo & Horas: reentrenar sin búsqueda de hiperparámetros (ya lo hace el campeón/retador), más núcleos o modelos por grupo de rutas \\
 Ciclo incremental & Un proceso, un ciclo a la vez & Un trabajo por ruta con exclusión por ruta en lugar de global \\
 API & Un proceso; consultas paginadas con p95 de 146 ms & Varias réplicas tras un balanceador, con la reanudación de ciclos solo en el programador (\cod{CICLO\_REANUDAR=desactivada}) \\
-Predicción interactiva & 4,5 s por cálculo & La pantalla \emph{Hoy} lee resultados ya calculados por el ciclo; el cálculo interactivo queda para consultas puntuales \\
+Predicción interactiva & 4,5 s por cálculo & El resumen del día (\cod{GET /overview}) lee resultados ya calculados por el ciclo; el cálculo interactivo queda para consultas puntuales \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -165,7 +165,7 @@ El ahorro en pesos es esa cifra por el costo de una vehículo-hora, dato que deb
 \midrule
 \endhead
 Parámetros operativos sin validar & Fase 0. Son parámetros versionados en la base: se corrigen sin desarrollo y queda la versión anterior. \\
-Baja adopción por los despachadores & Piloto consultivo; recomendaciones en lenguaje operativo con su razón; pantalla \emph{Hoy}; registro de si se siguió la recomendación. \\
+Baja adopción por los despachadores & Piloto consultivo; recomendaciones en lenguaje operativo con su razón; registro de si se siguió la recomendación. \\
 Alertas excesivas & Agrupación por ruta, código y día con gestión en lote; medición del porcentaje de descartadas por regla; recalibración con la capacidad validada. \\
 Mala calidad de los datos de sensores & Reglas de calidad CAL-xxx por lote, días sin lecturas tratados como faltantes, ALT-008 y ALT-009. \\
 Deriva o degradación del modelo & Monitoreo de deriva, error y cobertura en cada ciclo; reentrenamiento campeón/retador; reversión a la versión anterior en un clic. \\
@@ -173,7 +173,7 @@ Carga sobre la base operacional & Réplica de lectura, consultas por rango index
 Recomendación inviable & Restricciones duras de flota, headway y capacidad; la recomendación se marca \emph{no viable} con el motivo. \\
 Caídas y reinicios & Trabajos con latido, reanudación automática y reintentos, verificados con una caída real de la API. \\
 Exposición de datos & Mínimo privilegio en las dos bases, sin datos personales de conductores, claves con huella, secretos fuera del repositorio. \\
-Dependencia del equipo actual & Manuales técnico, de usuario y de despliegue; 412 pruebas; integración continua con SonarQube; explicación de cada archivo en \cod{comentarios\_codigo.pdf}. \\
+Dependencia del equipo actual & Manuales técnico, de usuario y de despliegue; 410 pruebas; integración continua con SonarQube; explicación de cada archivo en \cod{comentarios\_codigo.pdf}. \\
 Compatibilidad de librerías & Versiones fijadas en \cod{requirements.txt}; la instrumentación de trazas sobre SQLAlchemy 2.1 está cubierta por pruebas. \\
 \bottomrule
 \end{longtable}

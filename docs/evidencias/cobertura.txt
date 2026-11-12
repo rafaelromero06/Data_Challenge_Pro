@@ -9,7 +9,7 @@ frecuencias/analitica/monitoreo.py                75      0   100%
 frecuencias/analitica/serie.py                    20      0   100%
 frecuencias/api/errores.py                        31      4    87%
 frecuencias/api/esquemas.py                       80      0   100%
-frecuencias/api/main.py                          493     86    83%
+frecuencias/api/main.py                          489     86    82%
 frecuencias/config.py                             20      0   100%
 frecuencias/db.py                                 29      2    93%
 frecuencias/inferencia/ajuste.py                  40     27    32%
@@ -50,9 +50,9 @@ frecuencias/persistencia/roles.py                 56     14    75%
 frecuencias/persistencia/tablas.py                31      1    97%
 frecuencias/resiliencia.py                        58      1    98%
 frecuencias/segmentos/carga.py                   193     66    66%
-frecuencias/segmentos/consultas.py                70      5    93%
+frecuencias/segmentos/consultas.py                45      5    89%
 frecuencias/seguridad.py                          61     19    69%
 frecuencias/tiempo.py                             11      0   100%
 frecuencias/trazas.py                             70      1    99%
 ------------------------------------------------------------------
-TOTAL                                           3751    734    80%
+TOTAL                                           3722    734    80%

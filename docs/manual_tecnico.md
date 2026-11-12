@@ -50,11 +50,11 @@ flowchart LR
 | `frecuencias/segmentos` | Réplica de la segmentación del operador con PostGIS, perfil de carga por segmento y tramo crítico |
 | `frecuencias/persistencia` | Tablas SQLAlchemy Core y repositorios del esquema `ai_frecuencias`; rol de base de datos |
 | `frecuencias/api` | FastAPI, esquemas Pydantic, errores uniformes, autenticación por clave y rol |
-| `frecuencias/tablero` | Tablero web estático (HTML, CSS, JS sin dependencias) servido por la API. Su pantalla inicial, *Hoy*, la arma `operacion/resumen.py` a partir de las recomendaciones vigentes por hora. El *Mapa* usa Leaflet 1.9.4 (unpkg, con integridad SRI) y teselas de OpenStreetMap sobre el GeoJSON de `GET /segments/map` |
+| `frecuencias/tablero` | Tablero web estático (HTML, CSS, JS sin dependencias) servido por la API: predicción y recomendación, alertas, ejecuciones, modelos, parámetros y exportación |
 | `frecuencias/observabilidad.py`, `trazas.py`, `resiliencia.py`, `seguridad.py` | Logs JSON, métricas Prometheus, trazas OpenTelemetry, circuit breaker, claves de acceso |
 | `migrations/` | Alembic: 11 migraciones del esquema `ai_frecuencias` |
 | `pruebas/` | Pruebas de carga, volumen, EXPLAIN, humo en Docker, E2E del tablero, informe de SonarQube, paquete y demostración del ciclo, sesgo por segmento e informe de modelos activos |
-| `tests/` | 412 pruebas pytest (unitarias, integración con la base, API, ML, contrato) |
+| `tests/` | 410 pruebas pytest (unitarias, integración con la base, API, ML, contrato) |
 
 ## 2. El ciclo incremental
 
@@ -124,7 +124,7 @@ costo(b) = α · b · ciclo / 60                         (vehículo-horas de ope
     En un día en curso, la programación cargada llega solo hasta la hora actual, y lo habitual evita declarar cerrada una ruta que sigue operando.
   - **Horas fuera de la ventana.** Un bloque con menos de 25 % de su hora dentro de la ventana no se recomienda.
   - **Hora parcial.** En un bloque parcial, los buses operados se convierten en tasa por hora dentro del servicio: 3 salidas en 46 minutos equivalen a 3,9 buses por hora.
-  - **Registro.** La recomendación guarda `fraccion_servicio` y `ventana_servicio`. *Hoy* marca como `fuera_de_servicio` las recomendaciones antiguas que caen fuera de la ventana.
+  - **Registro.** La recomendación guarda `fraccion_servicio` y `ventana_servicio`. `GET /overview` marca como `fuera_de_servicio` las recomendaciones antiguas que caen fuera de la ventana.
 - **Recaudo.** `recommendation.parametros.recaudo` guarda los pasajeros esperados y los que quedarían sobre la capacidad en el tramo más cargado, con la frecuencia recomendada y con la actual. Con `tarifa_pasajero` definida los expresa en pesos; sin ella, esos campos quedan en `null`. No entra en la función objetivo: la referencia de §10.2 no lo incluye.
 - **Salida.** `recommendation.parametros.objetivo` guarda los componentes del costo, las tres mejores alternativas, la restricción que limita (`funcion_objetivo`, `servicio_minimo`, `capacidad_critica`, `headway_minimo`, `flota`), y la sensibilidad a cada peso multiplicado por 0,5 y por 2. `linea_base` guarda el resultado de las fórmulas de §10.3 para comparar.
 
@@ -149,7 +149,7 @@ Para no saturar al operador:
 - `GET /api/v1/alerts/groups` agrupa por ruta, código, severidad y día local de la ventana, con los identificadores, las horas y un ejemplo.
 - `POST /api/v1/alerts/status` cambia hasta 500 alertas a la vez. Cada una pasa por las mismas reglas de transición y bitácora que el cambio individual; las que no se pueden cambiar se informan sin abortar el lote.
 
-La pantalla *Hoy* (`GET /api/v1/overview`) toma la recomendación más reciente de cada ruta y hora (`recomendaciones.vigentes_por_hora`) y la traduce a una acción (`resumen.accion`: agregar, retirar, mantener, programar o no viable). También muestra el observado de la hora y las alertas pendientes. No recalcula nada, así que responde al instante.
+El resumen del día (`GET /api/v1/overview`) toma la recomendación más reciente de cada ruta y hora (`recomendaciones.vigentes_por_hora`) y la traduce a una acción (`resumen.accion`: agregar, retirar, mantener, programar o no viable). También muestra el observado de la hora y las alertas pendientes. No recalcula nada, así que responde al instante.
 
 ## 6. Monitoreo (§9.4)
 
@@ -194,9 +194,7 @@ Valores del último ciclo real con datos hasta diciembre de 2025:
 - **Usuarios de base de datos separados** (ver [E07](E07_mapa_tablas.md)): solo lectura en la fuente; en `ai_frecuencias`, sin borrado ni DDL. La clave del usuario de aplicación se envía como verificador SCRAM-SHA-256, nunca en texto plano.
 - **Sin secretos en el repositorio.** Todo va por variables de entorno (`.env` está en `.gitignore`; la plantilla es `.env.example`).
 - **Swagger UI** solo fuera de producción, o con `API_DOCS=activa`.
-- **Recursos externos del tablero.** Solo el mapa los usa:
-  - `leaflet.js` y `leaflet.css` 1.9.4 desde unpkg.com, con hash de integridad SRI, de modo que el navegador rechaza un archivo alterado;
-  - teselas de tile.openstreetmap.org, con su atribución.
+- **Recursos externos del tablero.** Ninguno: todo se sirve desde la propia API.
 
   Si no hay conexión, el resto del tablero funciona igual.
 - **Integraciones externas** (fuente, SMTP, WhatsApp) con timeout, reintento controlado y circuit breaker (RNF-010).
@@ -205,7 +203,7 @@ Valores del último ciclo real con datos hasta diciembre de 2025:
 
 | Nivel | Dónde | Cómo correr |
 |---|---|---|
-| Unitarias, integración, API, ML y contrato | `tests/` (412 pruebas, 80 % de cobertura) | `python -m pytest` (con la base cargada); `-m "not lenta"` omite las que cargan datos y modelos reales |
+| Unitarias, integración, API, ML y contrato | `tests/` (410 pruebas, 80 % de cobertura) | `python -m pytest` (con la base cargada); `-m "not lenta"` omite las que cargan datos y modelos reales |
 | Contrato de la API | `tests/test_contrato.py` | Corre en CI: compara la API con `docs/openapi.json`, los endpoints mínimos de §12.2 y el error uniforme de toda ruta protegida |
 | Carga (RNF-002) | `pruebas/carga_api.py` | Con la API levantada |
 | Volumen (RNF-003) | `pruebas/volumen_ingesta.py` | Base temporal en Docker |

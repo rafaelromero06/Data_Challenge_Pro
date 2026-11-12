@@ -63,43 +63,8 @@ def _pasos(url: str, clave: str, salida: Path, ruta: int, informe: dict) -> None
         pagina.fill("#clave-api", clave)
         pagina.click("#form-clave button")
         expect(pagina.locator("#clave-estado")).to_have_text("Clave aceptada.", timeout=15000)
-        expect(pagina.locator("#hoy-rutas .ruta-hoy").first).to_be_visible(timeout=30000)
-        informe["pasos"]["hoy"] = {
-            "rutas": pagina.locator("#hoy-rutas .ruta-hoy").count(),
-            "horas": pagina.locator("#hoy-rutas .franja-horas li.h").count(),
-            "acciones": pagina.locator("#hoy-rutas .accion").count(),
-            "resumen": pagina.locator("#hoy-resumen").inner_text(),
-        }
-        pagina.screenshot(path=str(salida / "0-hoy.png"), full_page=True)
-        pagina.locator("#hoy-rutas [data-mapa]").nth(1).click()
-        expect(pagina.locator("#tab-mapa")).to_have_attribute("aria-selected", "true")
-        expect(pagina.locator("#mapa img.leaflet-tile-loaded").first).to_be_visible(timeout=30000)
-        expect(pagina.locator("#mapa path.leaflet-interactive").nth(100)).to_be_attached(timeout=30000)
-        pagina.wait_for_timeout(1500)
-        informe["pasos"]["mapa_ruta"] = {
-            "ruta": pagina.locator("#mapa-ruta").input_value(), "tipo_dia": pagina.locator("#mapa-tipo").input_value(),
-            "hora": pagina.locator("#mapa-hora").input_value(),
-            "tramos": pagina.locator("#mapa path.leaflet-interactive").count(),
-            "teselas": pagina.locator("#mapa img.leaflet-tile-loaded").count(),
-            "filas_tabla": pagina.locator("#mapa-tabla tbody tr[data-i]").count(),
-        }
-        pagina.screenshot(path=str(salida / "6b-mapa-ruta.png"), full_page=True)
-        pagina.select_option("#mapa-ruta", "")
-        pagina.click("#form-mapa button[type=submit]")
-        expect(pagina.locator("#mapa path.leaflet-interactive").nth(300)).to_be_attached(timeout=30000)
-        pagina.wait_for_timeout(1500)
-        informe["pasos"]["mapa_todas"] = {"tramos": pagina.locator("#mapa path.leaflet-interactive").count(),
-                                          "leyenda": pagina.locator("#mapa-leyenda li").count()}
-        pagina.screenshot(path=str(salida / "6-mapa.png"), full_page=True)
-        pagina.locator("#mapa-tabla tbody tr[data-i]").first.focus()
-        pagina.keyboard.press("Enter")
-        pagina.click("#tab-hoy")
-        expect(pagina.locator("#hoy-rutas .ruta-hoy").first).to_be_visible(timeout=30000)
-        pagina.locator("#hoy-rutas [data-alertas]").first.click()
-        expect(pagina.locator("#tab-alertas")).to_have_attribute("aria-selected", "true")
-        expect(pagina.locator("#al-grupos tbody tr[data-i]").first).to_be_visible(timeout=15000)
-        informe["pasos"]["hoy_a_alertas_de_la_ruta"] = pagina.locator("#al-ruta").input_value()
-        pagina.click("#tab-prediccion")
+        expect(pagina.locator("#tab-prediccion")).to_have_attribute("aria-selected", "true")
+        expect(pagina.locator(f"#pred-ruta option[value='{ruta}']")).to_be_attached(timeout=15000)
         pagina.select_option("#pred-ruta", str(ruta))
         pagina.uncheck("#pred-guardar")
         pagina.click("#form-prediccion button[type=submit]")
@@ -118,12 +83,12 @@ def _pasos(url: str, clave: str, salida: Path, ruta: int, informe: dict) -> None
         pestanas = pagina.locator('[role="tab"]')
         pestanas.first.focus()
         pagina.keyboard.press("ArrowRight")
-        expect(pagina.locator("#tab-mapa")).to_have_attribute("aria-selected", "true")
-        expect(pagina.locator("#panel-mapa")).to_be_visible()
+        expect(pagina.locator("#tab-alertas")).to_have_attribute("aria-selected", "true")
+        expect(pagina.locator("#panel-alertas")).to_be_visible()
         pagina.keyboard.press("End")
         expect(pagina.locator("#tab-exportar")).to_have_attribute("aria-selected", "true")
         pagina.keyboard.press("Home")
-        expect(pagina.locator("#tab-hoy")).to_have_attribute("aria-selected", "true")
+        expect(pagina.locator("#tab-prediccion")).to_have_attribute("aria-selected", "true")
         informe["pasos"]["teclado_pestanas"] = True
 
         pagina.click("#tab-alertas")

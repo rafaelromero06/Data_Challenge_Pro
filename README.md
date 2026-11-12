@@ -10,11 +10,9 @@ Prototipo para el reto de frecuencias de SOBUSA y Extreme Technologies. Predice 
 - **Intervalo del 80 %.** Cubre entre 81,6 % y 82,5 % de las observaciones.
 - **Recomendación de frecuencia.** Minimiza costo de operación, espera, sobreocupación y cambio de frecuencia (§10.2), con restricciones de servicio, capacidad, headway y flota. Marca como *no viable* lo que no se puede cumplir.
 - **Diez tipos de alerta (ALT-001 a ALT-010).** Tienen umbrales versionados en PostgreSQL, deduplicación, bitácora y notificación por correo o WhatsApp. En el tablero se agrupan por ruta, código y día (775 pendientes caben en 178 grupos) y se gestionan en lote.
-- **Mapa de Barranquilla.** Muestra el recorrido de las rutas sobre OpenStreetMap, con cada tramo de 500 m coloreado por la ocupación p90 a la hora y tipo de día elegidos y el tramo más cargado de cada ruta marcado.
-- **Pantalla «Hoy».** Muestra, para las tres rutas a la vez, qué hacer en la hora actual y la siguiente en lenguaje operativo («Agregar 2 buses entre 06:15 y 07:15»), la franja del día y las alertas pendientes. Las horas después de la última salida programada aparecen como fuera de servicio y no piden buses.
 - **Ciclo incremental.** Se ejecuta como trabajo con avance, latido, reanudación tras reinicios y reintentos. Monitorea deriva, error y cobertura, y reentrena con comparación campeón/retador.
 - **Calidad del software.**
-  - 412 pruebas, con 80 % de cobertura sobre la base cargada.
+  - 410 pruebas, con 80 % de cobertura sobre la base cargada.
   - SonarQube sin bugs, vulnerabilidades ni code smells.
   - p95 de las consultas paginadas de 146 ms con 10 usuarios concurrentes.
   - Ingesta de 808.345 registros en 149 s, sin duplicados al repetir.
@@ -58,7 +56,7 @@ docker compose --profile calidad up -d          # servidor SonarQube local
 conda create -n frecuencias python=3.12 && conda activate frecuencias
 pip install -r requirements-dev.txt
 docker compose up -d db && python -m alembic upgrade head
-python -m pytest                                  # 412 pruebas, con la base cargada; -m "not lenta" para las rápidas
+python -m pytest                                  # 410 pruebas, con la base cargada; -m "not lenta" para las rápidas
 uvicorn frecuencias.api.main:app --reload
 python -m frecuencias.operacion.ciclo --origen base --dias 1
 ```
